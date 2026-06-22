@@ -18,7 +18,7 @@
       "buton": "Menüyü Keşfet",
       "butonEn": "Explore the Menu",
       "link": "/menu",
-      "gorsel": "",
+      "gorsel": "/yuklenenler/imgmqp60djt364.png",
       "renk": "from-marka to-marka-koyu",
       "emoji": "🍗"
     },
@@ -73,10 +73,10 @@
     "link": "/iletisim"
   },
   "animasyon": {
-    "heroEfekt": "slide",
-    "heroSure": 1,
+    "heroEfekt": "fade",
+    "heroSure": 3,
     "heroOtomatik": true,
     "scrollAcik": true,
-    "scrollSure": 700
+    "scrollSure": 1000
   }
 }

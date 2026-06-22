@@ -1,65 +1,75 @@
 // ============================================================
-//  TAVACI MEHMET - YÖNETİM PANELİ SUNUCUSU
-//  Tamamen bağımsız: veri panel/veri/*.json içinde (sende),
-//  fotoğraflar public/yuklenenler/ içinde. Dış servis yok.
+//  TAVACI MEHMET - YÖNETİM PANELİ + SİTE SUNUCUSU
+//  Veri MariaDB'de (hesapyon_db). Fotoğraflar public/yuklenenler/.
 //
-//  Çalıştırma:  npm run panel   (kök klasörden)
-//  Giriş:       http://localhost:5174  (şifre: panel/.env)
+//  Tek Node uygulaması:
+//    /            -> Astro SSR site (dist/server derlemesi)
+//    /panel       -> yönetim arayüzü (genel/)
+//    /api/*       -> panel API'leri (DB CRUD)
+//
+//  Çalıştırma:  npm run build  (bir kez)  +  npm run panel
+//  Giriş:       http://localhost:5174/panel  (parola: yoneticiler tablosu)
 // ============================================================
 
 import express from "express";
 import session from "express-session";
 import multer from "multer";
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync, rmSync } from "node:fs";
+import bcrypt from "bcryptjs";
+import {
+  readFileSync, writeFileSync, mkdirSync, existsSync,
+  readdirSync, rmSync,
+} from "node:fs";
 import { join, dirname, extname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { exec } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { sorgu, islem, tek } from "../lib/db.mjs";
+import { ayarlariDuzlestir, anasayfaTopla, HERO_ALANLAR } from "../lib/anasayfa.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const KOK = join(__dirname, ".."); // proje kökü
-const VERI = join(__dirname, "veri"); // JSON klasörü
-const YUKLEME = join(KOK, "public", "yuklenenler"); // fotoğraf klasörü
+const KOK = join(__dirname, "..");
+// Kalıcı veri dizini: Railway'de Volume mount yolu (VERI_DIZIN), yerelde repo içinde .veri-kalici
+const VERI = process.env.VERI_DIZIN || join(KOK, ".veri-kalici");
+const YUKLEME = join(VERI, "yuklenenler"); // yüklenen fotoğraflar
+const YEDEK = join(VERI, "yedekler");      // DB anlık görüntüleri
+const LOGO = join(VERI, "logo.png");       // panelden yüklenen logo
+const PUBLIC = join(KOK, "public");
+const DIST_CLIENT = join(KOK, "dist", "client");
 
-const YEDEK = join(__dirname, "yedekler"); // otomatik yedekler
-
-mkdirSync(VERI, { recursive: true });
 mkdirSync(YUKLEME, { recursive: true });
 mkdirSync(YEDEK, { recursive: true });
 
-// --- OTOMATİK YEDEK: kayıttan önce tüm veriyi anlık görüntüle ---
-let sonYedek = 0;
-function yedekAl() {
-  const simdi = Date.now();
-  if (simdi - sonYedek < 30000) return; // en fazla 30 sn'de bir yedek
-  sonYedek = simdi;
-  const klasor = join(YEDEK, String(simdi));
-  mkdirSync(klasor, { recursive: true });
-  for (const dosya of readdirSync(VERI)) {
-    if (dosya.endsWith(".json")) copyFileSync(join(VERI, dosya), join(klasor, dosya));
-  }
-  // Yalnızca son 30 yedeği tut (disk şişmesin)
-  const hepsi = readdirSync(YEDEK).filter((d) => /^\d+$/.test(d)).sort((a, b) => Number(b) - Number(a));
-  for (const eski of hepsi.slice(30)) rmSync(join(YEDEK, eski), { recursive: true, force: true });
-}
-
-const SIFRE = process.env.ADMIN_SIFRE || "tavaci123";
-const PORT = process.env.PANEL_PORT || 5174;
-
-// --- JSON oku/yaz yardımcıları ---
-// Nesne döndüren dosyalar (geri kalanı dizi)
-const NESNE = ["ayarlar", "metinler", "tema", "anasayfa", "hakkimizda"];
-const oku = (ad) => {
-  try { return JSON.parse(readFileSync(join(VERI, `${ad}.json`), "utf8")); }
-  catch { return NESNE.includes(ad) ? {} : []; }
-};
-const yaz = (ad, veri) => {
-  yedekAl(); // değişiklikten önce yedek al (geri alınabilsin)
-  writeFileSync(join(VERI, `${ad}.json`), JSON.stringify(veri, null, 2) + "\n", "utf8");
-};
+const PORT = process.env.PORT || process.env.PANEL_PORT || 5174;
 
 // Basit benzersiz id
 const yeniId = (onek) => `${onek}${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
 
+// ============================================================
+//  YEDEK / GERİ AL — DB anlık görüntüsünü JSON olarak sakla
+//  (mysqldump gerektirmez; kendi içinde taşınabilir)
+// ============================================================
+// Geri yükleme sırası FK için önemli (kategoriler -> urunler)
+const YEDEK_TABLOLAR = [
+  "kategoriler", "urunler", "subeler", "ayarlar", "tema", "metinler",
+  "hero_slaytlar", "anasayfa_ayar", "hakkimizda_rakamlar", "hakkimizda_degerler",
+];
+
+let sonYedek = 0;
+async function yedekAl(zorla = false) {
+  const simdi = Date.now();
+  if (!zorla && simdi - sonYedek < 30000) return; // en fazla 30 sn'de bir
+  sonYedek = simdi;
+  const anlik = {};
+  for (const t of YEDEK_TABLOLAR) anlik[t] = await sorgu(`SELECT * FROM ${t}`);
+  writeFileSync(join(YEDEK, `${simdi}.json`), JSON.stringify(anlik), "utf8");
+  // Yalnızca son 30 yedeği tut
+  const hepsi = readdirSync(YEDEK)
+    .filter((d) => /^\d+\.json$/.test(d))
+    .sort((a, b) => Number(b.split(".")[0]) - Number(a.split(".")[0]));
+  for (const eski of hepsi.slice(30)) rmSync(join(YEDEK, eski), { force: true });
+}
+
+// ============================================================
+//  EXPRESS
+// ============================================================
 const app = express();
 app.use(express.json({ limit: "5mb" }));
 app.use(
@@ -71,21 +81,22 @@ app.use(
   })
 );
 
-// Yüklenen fotoğrafları panelde önizleyebilmek için
-app.use("/yuklenenler", express.static(YUKLEME));
-// Admin arayüzü (genel klasör)
-app.use(express.static(join(__dirname, "genel")));
-
 // --- Giriş kontrolü ---
 function girisGerek(req, res, next) {
   if (req.session?.girisli) return next();
   return res.status(401).json({ hata: "Giriş gerekli" });
 }
 
-app.post("/giris", (req, res) => {
-  if (req.body?.sifre === SIFRE) {
-    req.session.girisli = true;
-    return res.json({ ok: true });
+app.post("/giris", async (req, res) => {
+  try {
+    const sifre = req.body?.sifre || "";
+    const y = await tek("SELECT sifre_hash FROM yoneticiler WHERE kullanici='admin'");
+    if (y && (await bcrypt.compare(sifre, y.sifre_hash))) {
+      req.session.girisli = true;
+      return res.json({ ok: true });
+    }
+  } catch (e) {
+    return res.status(500).json({ hata: e.message });
   }
   res.status(401).json({ hata: "Şifre yanlış" });
 });
@@ -96,98 +107,247 @@ app.post("/cikis", (req, res) => {
 
 app.get("/durum", (req, res) => res.json({ girisli: !!req.session?.girisli }));
 
+// ============================================================
+//  OKUMA YARDIMCILARI (DB -> panel arayüzünün beklediği şekil)
+// ============================================================
+async function anahtarDegerOku(tablo) {
+  const satirlar = await sorgu(`SELECT anahtar, deger FROM ${tablo}`);
+  return Object.fromEntries(satirlar.map((r) => [r.anahtar, r.deger]));
+}
+
+async function metinleriOku() {
+  const cikti = { tr: {}, en: {} };
+  for (const r of await sorgu("SELECT anahtar, dil, deger FROM metinler")) {
+    if (!cikti[r.dil]) cikti[r.dil] = {};
+    cikti[r.dil][r.anahtar] = r.deger ?? "";
+  }
+  return cikti;
+}
+
+async function anasayfaOku() {
+  const ayarMap = await anahtarDegerOku("anasayfa_ayar");
+  const heroSatirlar = await sorgu("SELECT * FROM hero_slaytlar ORDER BY sira ASC");
+  return anasayfaTopla(ayarMap, heroSatirlar);
+}
+
+async function hakkimizdaOku() {
+  const rakamlar = await sorgu("SELECT id, sayi, etiket, etiket_en, sira FROM hakkimizda_rakamlar ORDER BY sira ASC");
+  const degerler = await sorgu("SELECT id, emoji, baslik, baslik_en, metin, metin_en, sira FROM hakkimizda_degerler ORDER BY sira ASC");
+  return {
+    rakamlar: rakamlar.map((r) => ({ id: r.id, sayi: r.sayi, etiket: r.etiket, etiketEn: r.etiket_en, sira: r.sira })),
+    degerler: degerler.map((d) => ({ id: d.id, emoji: d.emoji, baslik: d.baslik, baslikEn: d.baslik_en, metin: d.metin, metinEn: d.metin_en, sira: d.sira })),
+  };
+}
+
 // --- Tüm veriyi getir (arayüz için) ---
-app.get("/api/veri", girisGerek, (req, res) => {
-  res.json({
-    kategoriler: oku("kategoriler"),
-    urunler: oku("urunler"),
-    subeler: oku("subeler"),
-    ayarlar: oku("ayarlar"),
-    metinler: oku("metinler"), // sayfa yazıları (tr/en)
-    tema: oku("tema"), // renkler
-    anasayfa: oku("anasayfa"), // hero slaytları, bölüm görünürlüğü
-    hakkimizda: oku("hakkimizda"), // istatistikler + değerler
-  });
+app.get("/api/veri", girisGerek, async (req, res) => {
+  try {
+    const kategoriler = (await sorgu("SELECT id, ad, ad_en, ikon, sira FROM kategoriler ORDER BY sira ASC"))
+      .map((k) => ({ id: k.id, ad: k.ad, adEn: k.ad_en, ikon: k.ikon, sira: k.sira }));
+    const urunler = (await sorgu("SELECT id, ad, ad_en, aciklama, aciklama_en, fiyat, kategori_id, sira, gorsel FROM urunler ORDER BY sira ASC"))
+      .map((u) => ({ id: u.id, ad: u.ad, adEn: u.ad_en, aciklama: u.aciklama, aciklamaEn: u.aciklama_en, fiyat: u.fiyat, kategoriId: u.kategori_id, sira: u.sira, gorsel: u.gorsel }));
+    const subeler = await sorgu("SELECT id, sehir, semt, adres, telefon, saat FROM subeler ORDER BY id ASC");
+    res.json({
+      kategoriler,
+      urunler,
+      subeler,
+      ayarlar: await anahtarDegerOku("ayarlar"),
+      metinler: await metinleriOku(),
+      tema: await anahtarDegerOku("tema"),
+      anasayfa: await anasayfaOku(),
+      hakkimizda: await hakkimizdaOku(),
+    });
+  } catch (e) {
+    res.status(500).json({ hata: e.message });
+  }
 });
 
 // --- KATEGORİ kaydet (yeni veya güncelle) ---
-app.post("/api/kategori", girisGerek, (req, res) => {
-  const liste = oku("kategoriler");
-  let k = req.body;
-  if (!k.id) { k.id = yeniId("k"); liste.push(k); }
-  else { const i = liste.findIndex((x) => x.id === k.id); if (i >= 0) liste[i] = k; else liste.push(k); }
-  yaz("kategoriler", liste);
-  res.json({ ok: true, id: k.id });
+app.post("/api/kategori", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    const k = req.body || {};
+    if (!k.id) k.id = yeniId("k");
+    await sorgu(
+      `INSERT INTO kategoriler (id, ad, ad_en, ikon, sira) VALUES (?,?,?,?,?)
+       ON CONFLICT (id) DO UPDATE SET ad=EXCLUDED.ad, ad_en=EXCLUDED.ad_en, ikon=EXCLUDED.ikon, sira=EXCLUDED.sira`,
+      [k.id, k.ad || "", k.adEn || "", k.ikon || "", Number(k.sira) || 0]
+    );
+    res.json({ ok: true, id: k.id });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
-app.delete("/api/kategori/:id", girisGerek, (req, res) => {
-  yaz("kategoriler", oku("kategoriler").filter((x) => x.id !== req.params.id));
-  // O kategorinin ürünlerini de sil
-  yaz("urunler", oku("urunler").filter((u) => u.kategoriId !== req.params.id));
-  res.json({ ok: true });
+app.delete("/api/kategori/:id", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    // urunler FK CASCADE ile birlikte silinir
+    await sorgu("DELETE FROM kategoriler WHERE id=?", [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
 // --- ÜRÜN kaydet ---
-app.post("/api/urun", girisGerek, (req, res) => {
-  const liste = oku("urunler");
-  let u = req.body;
-  if (!u.id) { u.id = yeniId("u"); liste.push(u); }
-  else { const i = liste.findIndex((x) => x.id === u.id); if (i >= 0) liste[i] = u; else liste.push(u); }
-  yaz("urunler", liste);
-  res.json({ ok: true, id: u.id });
+app.post("/api/urun", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    const u = req.body || {};
+    if (!u.id) u.id = yeniId("u");
+    await sorgu(
+      `INSERT INTO urunler (id, ad, ad_en, aciklama, aciklama_en, fiyat, kategori_id, sira, gorsel)
+       VALUES (?,?,?,?,?,?,?,?,?)
+       ON CONFLICT (id) DO UPDATE SET ad=EXCLUDED.ad, ad_en=EXCLUDED.ad_en, aciklama=EXCLUDED.aciklama,
+         aciklama_en=EXCLUDED.aciklama_en, fiyat=EXCLUDED.fiyat, kategori_id=EXCLUDED.kategori_id,
+         sira=EXCLUDED.sira, gorsel=EXCLUDED.gorsel`,
+      [u.id, u.ad || "", u.adEn || "", u.aciklama || "", u.aciklamaEn || "",
+       u.fiyat || "", u.kategoriId || null, Number(u.sira) || 0, u.gorsel || ""]
+    );
+    res.json({ ok: true, id: u.id });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
-app.delete("/api/urun/:id", girisGerek, (req, res) => {
-  yaz("urunler", oku("urunler").filter((x) => x.id !== req.params.id));
-  res.json({ ok: true });
+app.delete("/api/urun/:id", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    await sorgu("DELETE FROM urunler WHERE id=?", [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
 // --- ŞUBE kaydet ---
-app.post("/api/sube", girisGerek, (req, res) => {
-  const liste = oku("subeler");
-  let s = req.body;
-  if (!s.id) { s.id = yeniId("s"); liste.push(s); }
-  else { const i = liste.findIndex((x) => x.id === s.id); if (i >= 0) liste[i] = s; else liste.push(s); }
-  yaz("subeler", liste);
-  res.json({ ok: true, id: s.id });
+app.post("/api/sube", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    const s = req.body || {};
+    if (!s.id) s.id = yeniId("s");
+    await sorgu(
+      `INSERT INTO subeler (id, sehir, semt, adres, telefon, saat) VALUES (?,?,?,?,?,?)
+       ON CONFLICT (id) DO UPDATE SET sehir=EXCLUDED.sehir, semt=EXCLUDED.semt, adres=EXCLUDED.adres,
+         telefon=EXCLUDED.telefon, saat=EXCLUDED.saat`,
+      [s.id, s.sehir || "", s.semt || "", s.adres || "", s.telefon || "", s.saat || ""]
+    );
+    res.json({ ok: true, id: s.id });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
-app.delete("/api/sube/:id", girisGerek, (req, res) => {
-  yaz("subeler", oku("subeler").filter((x) => x.id !== req.params.id));
-  res.json({ ok: true });
+app.delete("/api/sube/:id", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    await sorgu("DELETE FROM subeler WHERE id=?", [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
-// --- AYARLAR kaydet ---
-app.post("/api/ayarlar", girisGerek, (req, res) => {
-  yaz("ayarlar", req.body || {});
-  res.json({ ok: true });
-});
-
-// --- SAYFA YAZILARI kaydet ---
-app.post("/api/metinler", girisGerek, (req, res) => {
-  yaz("metinler", req.body || { tr: {}, en: {} });
-  res.json({ ok: true });
+// --- AYARLAR kaydet (anahtar-değer upsert) ---
+app.post("/api/ayarlar", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    const a = req.body || {};
+    await islem(async (b) => {
+      for (const [anahtar, deger] of Object.entries(a)) {
+        await b.execute(
+          `INSERT INTO ayarlar (anahtar, deger) VALUES (?,?) ON CONFLICT (anahtar) DO UPDATE SET deger=EXCLUDED.deger`,
+          [anahtar, String(deger ?? "")]
+        );
+      }
+    });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
 // --- TEMA (renkler) kaydet ---
-app.post("/api/tema", girisGerek, (req, res) => {
-  yaz("tema", req.body || {});
-  res.json({ ok: true });
+app.post("/api/tema", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    const t = req.body || {};
+    await islem(async (b) => {
+      for (const [anahtar, deger] of Object.entries(t)) {
+        await b.execute(
+          `INSERT INTO tema (anahtar, deger) VALUES (?,?) ON CONFLICT (anahtar) DO UPDATE SET deger=EXCLUDED.deger`,
+          [anahtar, String(deger ?? "")]
+        );
+      }
+    });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
-// --- ANASAYFA kaydet (hero slaytları, görünürlük, panel görselleri) ---
-app.post("/api/anasayfa", girisGerek, (req, res) => {
-  yaz("anasayfa", req.body || {});
-  res.json({ ok: true });
+// --- SAYFA YAZILARI kaydet (tüm metinler değiştirilir) ---
+app.post("/api/metinler", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    const m = req.body || { tr: {}, en: {} };
+    await islem(async (b) => {
+      await b.execute("DELETE FROM metinler");
+      for (const dil of Object.keys(m)) {
+        for (const [anahtar, deger] of Object.entries(m[dil] || {})) {
+          await b.execute(
+            `INSERT INTO metinler (anahtar, dil, deger) VALUES (?,?,?)`,
+            [anahtar, dil, String(deger ?? "")]
+          );
+        }
+      }
+    });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
-// --- HAKKIMIZDA kaydet (istatistikler + değerler) ---
-app.post("/api/hakkimizda", girisGerek, (req, res) => {
-  yaz("hakkimizda", req.body || {});
-  res.json({ ok: true });
+// --- ANASAYFA kaydet (hero_slaytlar + anasayfa_ayar tamamen yenilenir) ---
+app.post("/api/anasayfa", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    const veri = req.body || {};
+    const hero = Array.isArray(veri.heroSlaytlar) ? veri.heroSlaytlar : [];
+    const ayarCiftleri = ayarlariDuzlestir(veri);
+    const kolonlar = ["id", ...HERO_ALANLAR.map(([, kol]) => kol), "sira"];
+    const yerTutucu = kolonlar.map(() => "?").join(", ");
+    await islem(async (b) => {
+      await b.execute("DELETE FROM hero_slaytlar");
+      for (let i = 0; i < hero.length; i++) {
+        const h = hero[i];
+        const degerler = [h.id || yeniId("h"), ...HERO_ALANLAR.map(([js]) => h[js] ?? ""), i * 10];
+        await b.execute(`INSERT INTO hero_slaytlar (${kolonlar.join(", ")}) VALUES (${yerTutucu})`, degerler);
+      }
+      await b.execute("DELETE FROM anasayfa_ayar");
+      for (const { anahtar, deger } of ayarCiftleri) {
+        await b.execute(`INSERT INTO anasayfa_ayar (anahtar, deger) VALUES (?,?)`, [anahtar, deger]);
+      }
+    });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
-// --- FOTOĞRAF yükle ---
+// --- HAKKIMIZDA kaydet (rakamlar + degerler tamamen yenilenir) ---
+app.post("/api/hakkimizda", girisGerek, async (req, res) => {
+  try {
+    await yedekAl();
+    const veri = req.body || {};
+    const rakamlar = Array.isArray(veri.rakamlar) ? veri.rakamlar : [];
+    const degerler = Array.isArray(veri.degerler) ? veri.degerler : [];
+    await islem(async (b) => {
+      await b.execute("DELETE FROM hakkimizda_rakamlar");
+      for (let i = 0; i < rakamlar.length; i++) {
+        const r = rakamlar[i];
+        await b.execute(
+          `INSERT INTO hakkimizda_rakamlar (id, sayi, etiket, etiket_en, sira) VALUES (?,?,?,?,?)`,
+          [r.id || yeniId("r"), r.sayi || "", r.etiket || "", r.etiketEn || "", i * 10]
+        );
+      }
+      await b.execute("DELETE FROM hakkimizda_degerler");
+      for (let i = 0; i < degerler.length; i++) {
+        const d = degerler[i];
+        await b.execute(
+          `INSERT INTO hakkimizda_degerler (id, emoji, baslik, baslik_en, metin, metin_en, sira) VALUES (?,?,?,?,?,?,?)`,
+          [d.id || yeniId("d"), d.emoji || "", d.baslik || "", d.baslikEn || "", d.metin || "", d.metinEn || "", i * 10]
+        );
+      }
+    });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
+});
+
+// ============================================================
+//  FOTOĞRAF / LOGO YÜKLEME (dosya sistemi — değişmedi)
+// ============================================================
 const depo = multer.diskStorage({
   destination: YUKLEME,
   filename: (req, file, cb) => cb(null, yeniId("img") + extname(file.originalname).toLowerCase()),
@@ -199,9 +359,8 @@ app.post("/api/gorsel", girisGerek, yukle.single("dosya"), (req, res) => {
   res.json({ yol: `/yuklenenler/${req.file.filename}` });
 });
 
-// --- LOGO yükle (public/logo.png üzerine yazar) ---
 const logoDepo = multer.diskStorage({
-  destination: join(KOK, "public"),
+  destination: VERI,
   filename: (req, file, cb) => cb(null, "logo.png"),
 });
 const logoYukle = multer({ storage: logoDepo, limits: { fileSize: 8 * 1024 * 1024 } });
@@ -211,8 +370,9 @@ app.post("/api/logo", girisGerek, logoYukle.single("dosya"), (req, res) => {
   res.json({ ok: true, yol: `/logo.png?${Date.now()}` });
 });
 
-// --- OTOMATİK ÇEVİRİ (TR -> EN) ---
-// Tarayıcıdan doğrudan çağrılınca CORS engeli olur; sunucu üzerinden geçiyoruz.
+// ============================================================
+//  OTOMATİK ÇEVİRİ (TR -> EN) — değişmedi
+// ============================================================
 app.post("/api/cevir", girisGerek, async (req, res) => {
   const metin = (req.body?.metin || "").trim();
   if (!metin) return res.json({ en: "" });
@@ -229,59 +389,105 @@ app.post("/api/cevir", girisGerek, async (req, res) => {
   }
 });
 
-// --- KULLANILMAYAN GÖRSELLERİ TEMİZLE ---
-app.post("/api/gorsel-temizle", girisGerek, (req, res) => {
-  // Tüm veri dosyalarındaki /yuklenenler/ referanslarını topla
-  const referanslar = new Set();
-  for (const dosya of readdirSync(VERI)) {
-    if (!dosya.endsWith(".json")) continue;
-    const icerik = readFileSync(join(VERI, dosya), "utf8");
-    for (const r of icerik.match(/\/yuklenenler\/[A-Za-z0-9._-]+/g) || []) {
-      referanslar.add(r.replace("/yuklenenler/", ""));
+// ============================================================
+//  KULLANILMAYAN GÖRSELLERİ TEMİZLE — DB'deki referansları tara
+// ============================================================
+app.post("/api/gorsel-temizle", girisGerek, async (req, res) => {
+  try {
+    const referanslar = new Set();
+    const ekle = (metin) => {
+      for (const r of String(metin || "").match(/\/yuklenenler\/[A-Za-z0-9._-]+/g) || []) {
+        referanslar.add(r.replace("/yuklenenler/", ""));
+      }
+    };
+    for (const r of await sorgu("SELECT gorsel FROM urunler")) ekle(r.gorsel);
+    for (const r of await sorgu("SELECT gorsel FROM hero_slaytlar")) ekle(r.gorsel);
+    for (const r of await sorgu("SELECT deger FROM anasayfa_ayar")) ekle(r.deger);
+
+    let silinen = 0;
+    for (const dosya of readdirSync(YUKLEME)) {
+      if (!referanslar.has(dosya)) { rmSync(join(YUKLEME, dosya), { force: true }); silinen++; }
     }
-  }
-  // Hiçbir yerde kullanılmayan yüklenmiş görselleri sil
-  let silinen = 0;
-  for (const dosya of readdirSync(YUKLEME)) {
-    if (!referanslar.has(dosya)) { rmSync(join(YUKLEME, dosya), { force: true }); silinen++; }
-  }
-  res.json({ ok: true, silinen });
+    res.json({ ok: true, silinen });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
-// --- YEDEK LİSTESİ ---
+// ============================================================
+//  YEDEK LİSTESİ / GERİ AL
+// ============================================================
 app.get("/api/yedekler", girisGerek, (req, res) => {
   const liste = readdirSync(YEDEK)
-    .filter((d) => /^\d+$/.test(d))
-    .sort((a, b) => Number(b) - Number(a))
+    .filter((d) => /^\d+\.json$/.test(d))
+    .map((d) => Number(d.split(".")[0]))
+    .sort((a, b) => b - a)
     .slice(0, 30)
-    .map((d) => ({ ad: d, zaman: Number(d) }));
+    .map((z) => ({ ad: String(z), zaman: z }));
   res.json(liste);
 });
 
-// --- GERİ AL (bir yedeği geri yükle) ---
-app.post("/api/geri-al", girisGerek, (req, res) => {
-  const ad = String(req.body?.ad || "").replace(/[^0-9]/g, "");
-  const klasor = join(YEDEK, ad);
-  if (!ad || !existsSync(klasor)) return res.status(404).json({ hata: "Yedek bulunamadı" });
-  // Geri almadan önce mevcut hâli de yedekle (yanlışlıkla geri alınırsa kurtarılsın)
-  sonYedek = 0;
-  yedekAl();
-  for (const dosya of readdirSync(klasor)) {
-    if (dosya.endsWith(".json")) copyFileSync(join(klasor, dosya), join(VERI, dosya));
-  }
-  res.json({ ok: true });
+app.post("/api/geri-al", girisGerek, async (req, res) => {
+  try {
+    const ad = String(req.body?.ad || "").replace(/[^0-9]/g, "");
+    const yol = join(YEDEK, `${ad}.json`);
+    if (!ad || !existsSync(yol)) return res.status(404).json({ hata: "Yedek bulunamadı" });
+    // Geri almadan önce mevcut hâli de yedekle
+    await yedekAl(true);
+    const anlik = JSON.parse(readFileSync(yol, "utf8"));
+    await islem(async (b) => {
+      // Önce tüm tabloları temizle (çocuk -> ebeveyn sırası; tek FK: urunler -> kategoriler)
+      for (const t of [...YEDEK_TABLOLAR].reverse()) await b.query(`DELETE FROM ${t}`);
+      // Sonra ebeveyn -> çocuk sırasında geri yükle (kategoriler, urunler, ...)
+      for (const t of YEDEK_TABLOLAR) {
+        for (const satir of anlik[t] || []) {
+          const kolonlar = Object.keys(satir);
+          if (!kolonlar.length) continue;
+          const yt = kolonlar.map(() => "?").join(", ");
+          await b.execute(
+            `INSERT INTO ${t} (${kolonlar.join(", ")}) VALUES (${yt})`,
+            kolonlar.map((k) => satir[k])
+          );
+        }
+      }
+    });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
-// --- SİTEYİ YAYINLA (yeniden derle) ---
+// --- SİTEYİ YAYINLA — SSR olduğu için içerik anında canlı; no-op ---
 app.post("/api/yayinla", girisGerek, (req, res) => {
-  const komut = process.platform === "win32" ? "npm.cmd run build" : "npm run build";
-  exec(komut, { cwd: KOK, windowsHide: true }, (err, stdout, stderr) => {
-    if (err) return res.status(500).json({ ok: false, hata: stderr || err.message });
-    res.json({ ok: true });
-  });
+  res.json({ ok: true, mesaj: "Değişiklikler anında yayında (SSR)." });
 });
+
+// ============================================================
+//  STATİK DOSYALAR + PANEL + ASTRO SSR
+//  Sıra önemli: önce çalışma-zamanı dosyaları & panel, en son site.
+// ============================================================
+// Yüklenen fotoğraflar (çalışma zamanında değişir)
+app.use("/yuklenenler", express.static(YUKLEME));
+// Panelden yüklenen logo Volume'de durur; yoksa public/dist'teki varsayılana düş
+app.get("/logo.png", (req, res, next) =>
+  existsSync(LOGO) ? res.sendFile(LOGO) : next());
+// public/ (logo.png, favicon) — çalışma zamanı sürümü dist'i ezsin
+app.use(express.static(PUBLIC));
+// Yönetim arayüzü
+app.use("/panel", express.static(join(__dirname, "genel")));
+// Astro istemci varlıkları (_astro/*) — derlemeden
+app.use(express.static(DIST_CLIENT));
+
+// Astro SSR handler'ı (derleme varsa) en sona bağla
+let ssrBagli = false;
+try {
+  const giris = join(KOK, "dist", "server", "entry.mjs");
+  if (existsSync(giris)) {
+    const mod = await import(pathToFileURL(giris).href);
+    if (mod.handler) { app.use(mod.handler); ssrBagli = true; }
+  }
+} catch (e) {
+  console.warn("Astro SSR derlemesi yüklenemedi:", e.message);
+}
 
 app.listen(PORT, () => {
-  console.log(`\n  Yönetim paneli hazır:  http://localhost:${PORT}`);
-  console.log(`  Şifre: ${SIFRE}  (panel/.env içinden değiştir)\n`);
+  console.log(`\n  Sunucu hazır:`);
+  console.log(`  • Panel:  http://localhost:${PORT}/panel`);
+  console.log(`  • Site :  http://localhost:${PORT}/  ${ssrBagli ? "" : "(SSR yok — 'npm run build' çalıştırın)"}\n`);
 });

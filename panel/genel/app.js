@@ -847,7 +847,7 @@ async function yayinla() {
 }
 
 // ================= CANLI ÖNİZLEME =================
-const SITE_URL = "http://localhost:4321"; // sitenin (dev) adresi
+const SITE_URL = ""; // site panelle aynı sunucuda (SSR) — aynı origin
 let onizlemeAcik = false;
 
 function onizlemeToggle() {

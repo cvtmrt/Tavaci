@@ -64,7 +64,15 @@
 
 <script>
   // Çeviri sözlüğünü içeri aktar (derlemede paketlenir)
-  import { ceviriler } from "../i18n/ceviriler.js";
+  import { ceviriler as varsayilanSozluk } from "../i18n/ceviriler.js";
+
+  // Panelde (DB'de) düzenlenen metinler SSR tarafından enjekte edilir;
+  // varsayılan sözlüğün üzerine yazılır (panel kazanır).
+  const panelMetin = (window as any).__PANEL_METINLER || {};
+  const ceviriler = {
+    tr: { ...varsayilanSozluk.tr, ...(panelMetin.tr || {}) },
+    en: { ...varsayilanSozluk.en, ...(panelMetin.en || {}) },
+  };
 
   const kapsayici = document.getElementById("dil-kapsayici");
   const panel = document.getElementById("dil-panel");

@@ -16,7 +16,7 @@ import Sepet from "../components/Sepet.astro";
 // View Transitions: sayfalar arası akıcı geçiş (beyaz flash/titremeyi önler)
 import { ClientRouter } from "astro:transitions";
 // Tema renkleri + animasyon ayarları + iletişim (panelden yönetilir)
-import { temaGetir, anasayfaGetir, ayarlarGetir } from "../data/icerik.js";
+import { temaGetir, anasayfaGetir, ayarlarGetir, metinlerGetir } from "../data/icerik.js";
 
 // Sayfa başlığını ve açıklamasını dışarıdan alıyoruz (prop)
 const { baslik = "Tavacı Mehmet", aciklama = "Közde pişen efsane tavalar" } = Astro.props;
@@ -30,6 +30,9 @@ const anim = animasyon || {};
 // İletişim (WhatsApp yüzen butonu için)
 const ayarlar = await ayarlarGetir();
 const waNumara = (ayarlar.whatsapp || "").replace(/[^0-9]/g, "");
+
+// Panelde düzenlenen sayfa metinleri (DilSecici varsayılan sözlüğün üzerine yazar)
+const panelMetinler = await metinlerGetir();
 ---
 
 <!doctype html>
@@ -43,6 +46,9 @@ const waNumara = (ayarlar.whatsapp || "").replace(/[^0-9]/g, "");
 
     <!-- Sayfalar arası yumuşak geçiş -->
     <ClientRouter />
+
+    <!-- PANEL METİNLERİ: panelde düzenlenen i18n yazıları DilSecici'ye taşı -->
+    <script is:inline set:html={`window.__PANEL_METINLER=${JSON.stringify(panelMetinler)};`}></script>
 
     <!-- FLASH ÖNLEME: ilk yüklemede kayıtlı dili hemen uygula.
          Dil Türkçe değilse, çeviri bitene kadar içeriği gizle ki

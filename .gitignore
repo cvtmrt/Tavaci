@@ -26,6 +26,9 @@ pnpm-debug.log*
 # Panel otomatik yedekleri (repoda gerekmez)
 panel/yedekler/
 
+# Kalıcı veri dizini (Railway Volume yereldeki karşılığı: yuklenenler/yedekler/logo)
+.veri-kalici/
+
 # Terk edilmiş Sanity denemesi
 studio/
 

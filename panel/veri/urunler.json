@@ -78,14 +78,14 @@
   },
   {
     "id": "u-k2-1",
-    "kategoriId": "k2",
     "ad": "Şefin Tavasi",
     "adEn": "Chef's Pan",
     "aciklama": "Her lokmasında ayrı bir lezzet şöleni, şefin gizli baharatları ile hazırlanan özgün lezzet. Özel soslu enfes kremalı penne makarna ve taptaze salatas��yla servis edilir.",
     "aciklamaEn": "A different feast of taste in every bite, a unique taste prepared with the chef's secret spices. Served with delicious creamy penne pasta with special sauce and fresh salad.",
-    "fiyat": "₺330",
-    "gorsel": "",
-    "sira": 10
+    "fiyat": "₺340",
+    "kategoriId": "k2",
+    "sira": 10,
+    "gorsel": ""
   },
   {
     "id": "u-k2-2",
@@ -903,14 +903,14 @@
   },
   {
     "id": "u-k4-1",
-    "kategoriId": "k4",
     "ad": "Kremalı Kaşarlı Penne",
     "adEn": "Creamy Cheddar Penne",
     "aciklama": "Şefin özel baharatları ile hazırlanan kremalı kaşarlı penne + Salata + Kebabçı Lavaşı",
     "aciklamaEn": "Creamy kashar penne prepared with the chef's special spices + Salad + Kebabçı Lavash",
-    "fiyat": "₺225",
-    "gorsel": "https://images.deliveryhero.io/image/global-menu-service/YS_TR/vendor/oa1t/product/89598148/aef6d7c2-403b-4769-95ae-057a2acdccde.jpg",
-    "sira": 10
+    "fiyat": "₺230",
+    "kategoriId": "k4",
+    "sira": 10,
+    "gorsel": "https://images.deliveryhero.io/image/global-menu-service/YS_TR/vendor/oa1t/product/89598148/aef6d7c2-403b-4769-95ae-057a2acdccde.jpg"
   },
   {
     "id": "u-k4-2",

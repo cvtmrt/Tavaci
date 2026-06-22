@@ -10,15 +10,22 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "panel": "node --env-file=panel/.env panel/sunucu.mjs"
+    "db-test": "node --env-file=panel/.env scripts/db-test.mjs",
+    "db-kur": "node scripts/db-kur.mjs",
+    "aktar": "node --env-file=panel/.env scripts/aktar.mjs",
+    "panel": "node --env-file=panel/.env panel/sunucu.mjs",
+    "start": "node panel/sunucu.mjs"
   },
   "dependencies": {
+    "@astrojs/node": "^10.1.0",
     "@tailwindcss/vite": "^4.3.1",
     "aos": "^2.3.4",
     "astro": "^6.4.7",
+    "bcryptjs": "^2.4.3",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "multer": "^2.2.0",
+    "pg": "^8.22.0",
     "swiper": "^12.2.0",
     "tailwindcss": "^4.3.1"
   }

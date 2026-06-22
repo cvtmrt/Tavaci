@@ -1,63 +1,56 @@
 // ============================================================
 //  İÇERİK KATMANI
-//  Sayfalar veriyi BURADAN ister. Veri tamamen SENDE:
-//  panel/veri/*.json dosyalarından okunur (kendi panelin yazar).
-//  Dosya yoksa eski yerel veriye düşer (site yine çalışır).
+//  Sayfalar veriyi BURADAN ister. Veri MariaDB'den (hesapyon_db)
+//  her istekte (SSR) okunur — panelden yapılan değişiklik anında
+//  sitede görünür.
+//
+//  DB erişilemezse / boşsa yerel yedeğe düşülür (site çökmesin):
+//    menu.js, subeler.js ve buradaki inline varsayılanlar.
 //
 //  Dönen menü yapısı:
 //    { kategori, kategoriEn, ikon, slug, urunler:[
 //        { ad, adEn, aciklama, aciklamaEn, fiyat, gorsel, slug, katSlug } ] }
 // ============================================================
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { slug, kategoriListesi } from "./menuYardimci.js";
 import { subeler as subelerYerel } from "./subeler.js";
+import { sorgu } from "../../lib/db.mjs";
+import { anasayfaTopla, ANASAYFA_VARSAYILAN } from "../../lib/anasayfa.mjs";
 
-const VERI = join(process.cwd(), "panel", "veri");
-
-// Bir JSON dosyasını oku (yoksa null döndür)
-function jsonOku(ad) {
-  try {
-    return JSON.parse(readFileSync(join(VERI, ad), "utf8"));
-  } catch {
-    return null;
-  }
-}
-
-// MENÜ — panel JSON'larından kur, yoksa yerel yedeğe düş
-// (Veri yerel/hızlı olduğu için önbellek yok; her düzenleme anında yansır.)
+// MENÜ — DB'den kur, yoksa yerel yedeğe düş
 export async function menuGetir() {
-  const kategoriler = jsonOku("kategoriler.json");
-  const urunler = jsonOku("urunler.json");
-
-  if (kategoriler && urunler) {
-    const sirali = [...kategoriler].sort((a, b) => (a.sira || 0) - (b.sira || 0));
-    return sirali.map((kat) => {
-      const kSlug = slug(kat.ad);
-      const gorulen = {};
-      const katUrunleri = urunler
-        .filter((u) => u.kategoriId === kat.id)
-        .sort((a, b) => (a.sira || 0) - (b.sira || 0))
-        .map((u, i) => {
-          let s = slug(u.ad) || "urun";
-          if (gorulen[s]) s = `${s}-${i + 1}`;
-          gorulen[s] = true;
-          return {
-            ad: u.ad,
-            adEn: u.adEn || "",
-            aciklama: u.aciklama || "",
-            aciklamaEn: u.aciklamaEn || "",
-            fiyat: u.fiyat || "",
-            gorsel: u.gorsel || "",
-            slug: s,
-            katSlug: kSlug,
-          };
-        });
-      return { kategori: kat.ad, kategoriEn: kat.adEn || "", ikon: kat.ikon || "🍽️", slug: kSlug, urunler: katUrunleri };
-    });
+  try {
+    const kategoriler = await sorgu("SELECT id, ad, ad_en, ikon, sira FROM kategoriler ORDER BY sira ASC");
+    const urunler = await sorgu(
+      "SELECT id, ad, ad_en, aciklama, aciklama_en, fiyat, kategori_id, sira, gorsel FROM urunler ORDER BY sira ASC"
+    );
+    if (kategoriler.length) {
+      return kategoriler.map((kat) => {
+        const kSlug = slug(kat.ad);
+        const gorulen = {};
+        const katUrunleri = urunler
+          .filter((u) => u.kategori_id === kat.id)
+          .map((u, i) => {
+            let s = slug(u.ad) || "urun";
+            if (gorulen[s]) s = `${s}-${i + 1}`;
+            gorulen[s] = true;
+            return {
+              ad: u.ad,
+              adEn: u.ad_en || "",
+              aciklama: u.aciklama || "",
+              aciklamaEn: u.aciklama_en || "",
+              fiyat: u.fiyat || "",
+              gorsel: u.gorsel || "",
+              slug: s,
+              katSlug: kSlug,
+            };
+          });
+        return { kategori: kat.ad, kategoriEn: kat.ad_en || "", ikon: kat.ikon || "🍽️", slug: kSlug, urunler: katUrunleri };
+      });
+    }
+  } catch (e) {
+    console.error("menuGetir DB hatası, yerel yedeğe düşülüyor:", e.message);
   }
-
   return kategoriListesi(); // yerel yedek
 }
 
@@ -69,43 +62,31 @@ export function kapak(kat) {
 
 // ŞUBELER
 export async function subeleriGetir() {
-  const veri = jsonOku("subeler.json");
-  if (veri && veri.length) return veri;
+  try {
+    const veri = await sorgu("SELECT id, sehir, semt, adres, telefon, saat FROM subeler ORDER BY id ASC");
+    if (veri.length) return veri;
+  } catch (e) {
+    console.error("subeleriGetir DB hatası:", e.message);
+  }
   return subelerYerel;
 }
 
-// ANASAYFA (hero slaytları, bölüm görünürlüğü, panel görselleri/linkleri,
-//           hikaye ve CTA yapısal alanları)
+// ANASAYFA (hero slaytları, bölüm görünürlüğü, panel görselleri/linkleri, hikaye, cta, animasyon)
 export async function anasayfaGetir() {
-  const varsayilan = {
-    bolumler: { hero: true, kesfet: true, hikaye: true, instagram: true, cta: true },
-    heroSlaytlar: [],
-    panelGorseller: { 1: "", 2: "", 3: "", 4: "" },
-    panelLinkler: { 1: "/menu", 2: "/subeler", 3: "/hakkimizda", 4: "/iletisim" },
-    hikaye: { emoji: "👨‍🍳", link: "/hakkimizda" },
-    cta: { link: "/iletisim" },
-    animasyon: {
-      heroEfekt: "fade", // "fade" (yumuşak) | "slide" (kayma)
-      heroSure: 4.5, // otomatik geçiş süresi (saniye)
-      heroOtomatik: true, // otomatik dönsün mü
-      scrollAcik: true, // kaydırınca beliren animasyonlar
-      scrollSure: 700, // animasyon hızı (ms)
-    },
-  };
-  const veri = jsonOku("anasayfa.json");
-  if (!veri) return varsayilan;
-  return {
-    bolumler: { ...varsayilan.bolumler, ...(veri.bolumler || {}) },
-    heroSlaytlar: Array.isArray(veri.heroSlaytlar) ? veri.heroSlaytlar : [],
-    panelGorseller: { ...varsayilan.panelGorseller, ...(veri.panelGorseller || {}) },
-    panelLinkler: { ...varsayilan.panelLinkler, ...(veri.panelLinkler || {}) },
-    hikaye: { ...varsayilan.hikaye, ...(veri.hikaye || {}) },
-    cta: { ...varsayilan.cta, ...(veri.cta || {}) },
-    animasyon: { ...varsayilan.animasyon, ...(veri.animasyon || {}) },
-  };
+  try {
+    const ayarSatirlar = await sorgu("SELECT anahtar, deger FROM anasayfa_ayar");
+    const heroSatirlar = await sorgu("SELECT * FROM hero_slaytlar ORDER BY sira ASC");
+    const ayarMap = Object.fromEntries(ayarSatirlar.map((r) => [r.anahtar, r.deger]));
+    if (ayarSatirlar.length || heroSatirlar.length) {
+      return anasayfaTopla(ayarMap, heroSatirlar);
+    }
+  } catch (e) {
+    console.error("anasayfaGetir DB hatası:", e.message);
+  }
+  return ANASAYFA_VARSAYILAN;
 }
 
-// HAKKIMIZDA (istatistikler + değerler) — panelden düzenlenir
+// HAKKIMIZDA (istatistikler + değerler)
 export async function hakkimizdaGetir() {
   const varsayilan = {
     rakamlar: [
@@ -120,15 +101,24 @@ export async function hakkimizdaGetir() {
       { emoji: "❤️", baslik: "Ev Sıcaklığı", baslikEn: "Home Warmth", metin: "Misafirimizi aile gibi ağırlarız.", metinEn: "We welcome our guests like family." },
     ],
   };
-  const veri = jsonOku("hakkimizda.json");
-  if (!veri) return varsayilan;
-  return {
-    rakamlar: Array.isArray(veri.rakamlar) && veri.rakamlar.length ? veri.rakamlar : varsayilan.rakamlar,
-    degerler: Array.isArray(veri.degerler) && veri.degerler.length ? veri.degerler : varsayilan.degerler,
-  };
+  try {
+    const rakamlar = await sorgu("SELECT sayi, etiket, etiket_en FROM hakkimizda_rakamlar ORDER BY sira ASC");
+    const degerler = await sorgu("SELECT emoji, baslik, baslik_en, metin, metin_en FROM hakkimizda_degerler ORDER BY sira ASC");
+    return {
+      rakamlar: rakamlar.length
+        ? rakamlar.map((r) => ({ sayi: r.sayi, etiket: r.etiket, etiketEn: r.etiket_en || "" }))
+        : varsayilan.rakamlar,
+      degerler: degerler.length
+        ? degerler.map((d) => ({ emoji: d.emoji, baslik: d.baslik, baslikEn: d.baslik_en || "", metin: d.metin || "", metinEn: d.metin_en || "" }))
+        : varsayilan.degerler,
+    };
+  } catch (e) {
+    console.error("hakkimizdaGetir DB hatası:", e.message);
+    return varsayilan;
+  }
 }
 
-// TEMA (renkler) — panelden, yoksa varsayılan marka renkleri
+// TEMA (renkler)
 export async function temaGetir() {
   const varsayilan = {
     marka: "#c1272d",
@@ -137,11 +127,35 @@ export async function temaGetir() {
     koyu: "#1f1b16",
     krem: "#fbf6ee",
   };
-  const veri = jsonOku("tema.json");
-  return veri ? { ...varsayilan, ...veri } : varsayilan;
+  try {
+    const satirlar = await sorgu("SELECT anahtar, deger FROM tema");
+    if (satirlar.length) {
+      const veri = Object.fromEntries(satirlar.map((r) => [r.anahtar, r.deger]));
+      return { ...varsayilan, ...veri };
+    }
+  } catch (e) {
+    console.error("temaGetir DB hatası:", e.message);
+  }
+  return varsayilan;
 }
 
-// SİTE AYARLARI (önbelleksiz; düzenleme anında yansır)
+// SAYFA METİNLERİ (i18n override: tr/en) — panelden düzenlenir.
+// DilSecici'nin varsayılan sözlüğünün ÜZERİNE yazılır.
+export async function metinlerGetir() {
+  const cikti = { tr: {}, en: {} };
+  try {
+    const satirlar = await sorgu("SELECT anahtar, dil, deger FROM metinler");
+    for (const r of satirlar) {
+      if (!cikti[r.dil]) cikti[r.dil] = {};
+      cikti[r.dil][r.anahtar] = r.deger ?? "";
+    }
+  } catch (e) {
+    console.error("metinlerGetir DB hatası:", e.message);
+  }
+  return cikti;
+}
+
+// SİTE AYARLARI
 export async function ayarlarGetir() {
   const varsayilan = {
     telefon: "0850 000 00 00",
@@ -150,6 +164,14 @@ export async function ayarlarGetir() {
     siparisLinki: "",
     whatsapp: "", // sadece rakam, ülke koduyla: 905xxxxxxxxx
   };
-  const veri = jsonOku("ayarlar.json");
-  return veri ? { ...varsayilan, ...veri } : varsayilan;
+  try {
+    const satirlar = await sorgu("SELECT anahtar, deger FROM ayarlar");
+    if (satirlar.length) {
+      const veri = Object.fromEntries(satirlar.map((r) => [r.anahtar, r.deger]));
+      return { ...varsayilan, ...veri };
+    }
+  } catch (e) {
+    console.error("ayarlarGetir DB hatası:", e.message);
+  }
+  return varsayilan;
 }

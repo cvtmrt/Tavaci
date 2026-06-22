@@ -10,13 +10,13 @@
 //  NOT: Menü ürün adları/açıklamaları ve şube adresleri özel isim
 //  olduğu için çevrilmez (Türkçe kalır).
 //
-//  PANEL OVERRIDE: panel/veri/metinler.json içindeki yazılar
-//  buradaki varsayılanların ÜZERİNE yazılır. Böylece sayfa
-//  metinleri yönetim panelinden düzenlenebilir.
+//  PANEL OVERRIDE: panelde (veritabanında) düzenlenen metinler,
+//  bu varsayılanların ÜZERİNE çalışma anında (runtime) yazılır.
+//  SSR, DB'deki metinleri window.__PANEL_METINLER olarak sayfaya
+//  enjekte eder; DilSecici.astro betiği birleştirir.
+//  (Bu dosya istemci tarafında paketlendiği için DB'yi burada
+//   çağıramayız; yalnızca varsayılanları taşır.)
 // ============================================================
-
-// Panelde düzenlenen metinler (yoksa boş kabul edilir)
-import override from "../../panel/veri/metinler.json";
 
 const varsayilan = {
   tr: {
@@ -290,8 +290,8 @@ const varsayilan = {
   },
 };
 
-// Varsayılanları panel metinleriyle birleştir (panel kazanır)
+// Varsayılan sözlük (panel metinleri runtime'da DilSecici içinde birleştirilir)
 export const ceviriler = {
-  tr: { ...varsayilan.tr, ...(override?.tr || {}) },
-  en: { ...varsayilan.en, ...(override?.en || {}) },
+  tr: { ...varsayilan.tr },
+  en: { ...varsayilan.en },
 };

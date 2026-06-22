@@ -3,22 +3,16 @@
 //  KATEGORİ SAYFASI  (/menu/[kategori])
 //  Bir kategorinin tüm ürünlerini görselli kartlar halinde listeler.
 //  Her ürün kartı, ürünün detay sayfasına götürür.
-//  getStaticPaths her kategori için ayrı bir sayfa üretir.
+//  SSR: kategori URL'den (Astro.params) bulunur, veri DB'den okunur.
 // ============================================================
 
 import Layout from "../../layouts/Layout.astro";
 import { menuGetir } from "../../data/icerik.js";
 
-export async function getStaticPaths() {
-  // Her kategori için bir yol (route) üret (panelden veya yerelden)
-  const kategoriler = await menuGetir();
-  return kategoriler.map((kat) => ({
-    params: { kategori: kat.slug },
-    props: { kat },
-  }));
-}
-
-const { kat } = Astro.props;
+const { kategori } = Astro.params;
+const kategoriler = await menuGetir();
+const kat = kategoriler.find((k) => k.slug === kategori);
+if (!kat) return new Response(null, { status: 404, statusText: "Kategori bulunamadı" });
 ---
 
 <Layout baslik={`${kat.kategori} | Tavacı Mehmet`} aciklama={`${kat.kategori} kategorisindeki tüm lezzetler.`}>

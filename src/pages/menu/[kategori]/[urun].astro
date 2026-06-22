@@ -6,40 +6,29 @@
 //   - "İçinde Neler Var?", besin değerleri, alerjenler (temsilî)
 //   - "Yanına Ne Gider?" (içecek + tatlı önerisi)
 //   - "Benzer Ürünler" (aynı kategoriden)
-//  getStaticPaths her ürün için ayrı bir sayfa üretir.
+//  SSR: kategori/ürün URL'den (Astro.params) bulunur, veri DB'den.
 // ============================================================
 
 import Layout from "../../../layouts/Layout.astro";
 import { menuGetir, ayarlarGetir } from "../../../data/icerik.js";
 
-export async function getStaticPaths() {
-  const kategoriler = await menuGetir();
+const { kategori, urun: urunSlug } = Astro.params;
+const kategoriler = await menuGetir();
+const kat = kategoriler.find((k) => k.slug === kategori);
+const urun = kat?.urunler.find((u) => u.slug === urunSlug);
+if (!kat || !urun) return new Response(null, { status: 404, statusText: "Ürün bulunamadı" });
 
-  // "Yanına ne gider" önerileri: bir içecek + bir tatlı
-  const kucult = (s) => (s || "").toLocaleLowerCase("tr");
-  const icecekKat = kategoriler.find((k) => kucult(k.kategori).includes("içecek"));
-  const tatliKat = kategoriler.find((k) => kucult(k.kategori).includes("tatlı"));
-  const oneri = [];
-  if (icecekKat) oneri.push(icecekKat.urunler.find((u) => u.gorsel) || icecekKat.urunler[0]);
-  if (tatliKat) oneri.push(tatliKat.urunler.find((u) => u.gorsel) || tatliKat.urunler[0]);
+// "Yanına ne gider" önerileri: bir içecek + bir tatlı
+const kucult = (s) => (s || "").toLocaleLowerCase("tr");
+const icecekKat = kategoriler.find((k) => kucult(k.kategori).includes("içecek"));
+const tatliKat = kategoriler.find((k) => kucult(k.kategori).includes("tatlı"));
+const oneriHam = [];
+if (icecekKat) oneriHam.push(icecekKat.urunler.find((u) => u.gorsel) || icecekKat.urunler[0]);
+if (tatliKat) oneriHam.push(tatliKat.urunler.find((u) => u.gorsel) || tatliKat.urunler[0]);
+const oneri = oneriHam.filter((o) => o && o.slug !== urun.slug);
 
-  const paths = [];
-  for (const kat of kategoriler) {
-    for (const urun of kat.urunler) {
-      // Aynı kategoriden, görselli, kendisi olmayan 4 benzer ürün
-      const benzer = kat.urunler
-        .filter((u) => u.slug !== urun.slug && u.gorsel)
-        .slice(0, 4);
-      paths.push({
-        params: { kategori: kat.slug, urun: urun.slug },
-        props: { kat, urun, benzer, oneri: oneri.filter((o) => o && o.slug !== urun.slug) },
-      });
-    }
-  }
-  return paths;
-}
-
-const { kat, urun, benzer, oneri } = Astro.props;
+// Aynı kategoriden, görselli, kendisi olmayan 4 benzer ürün
+const benzer = kat.urunler.filter((u) => u.slug !== urun.slug && u.gorsel).slice(0, 4);
 
 // "Sipariş Ver" hedefi (panelde sipariş linki varsa oraya)
 const ayarlar = await ayarlarGetir();
