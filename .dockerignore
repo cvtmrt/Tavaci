@@ -1,0 +1,36 @@
+# Bağımlılıklar — build sırasında `npm ci` ile yeniden kurulur.
+# Yerel node_modules kopyalanırsa overlay FS'te EBUSY (rmdir .astro) hatası olur.
+node_modules/
+
+# Astro üretilmiş tipler / önbellek
+.astro/
+
+# Build çıktısı — build sırasında yeniden üretilir
+dist/
+
+# Git
+.git/
+.gitignore
+
+# Ortam değişkenleri (Railway'de panelden verilir)
+.env
+.env.production
+
+# macOS
+.DS_Store
+
+# Editör
+.vscode/
+.idea/
+
+# Loglar
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Kalıcı veri / yedekler (Railway Volume kullanır)
+.veri-kalici/
+panel/yedekler/
+
+# Dokümantasyon (build için gereksiz)
+*.md
