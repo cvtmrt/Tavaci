@@ -10,6 +10,9 @@ import tailwindcss from '@tailwindcss/vite';
 // derlenir; panel/sunucu.mjs içindeki Express'e bağlanır.
 export default defineConfig({
   output: 'server',
+  // Önbelleği node_modules dışına al. Varsayılan "./node_modules/.astro"
+  // konteyner overlay FS'inde npm sırasında EBUSY (rmdir) hatasına yol açıyor.
+  cacheDir: './.astro',
   adapter: node({ mode: 'middleware' }),
   vite: {
     plugins: [tailwindcss()]
