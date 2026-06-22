@@ -1,0 +1,134 @@
+---
+// ============================================================
+//  BÖLÜM YÖNLENDİRME PANELLERİ ("Keşfetmeye Başla")
+//  Tavuk Dünyası tarzı: tam genişlikte, sırayla yer değiştiren
+//  (zigzag) split paneller. Bir yanda metin + buton, diğer yanda
+//  büyük görsel. Kaydırınca iki yandan içeri kayarak belirir,
+//  görselin üzerine gelince yakınlaşır.
+//
+//  Panel arka plan görselleri PANELDEN gelir (Anasayfa sekmesi).
+//  Görsel yoksa degrade + emoji gösterilir.
+// ============================================================
+
+import { anasayfaGetir } from "../data/icerik.js";
+
+const paneller = [
+  {
+    anahtar: "panel.1",
+    ustBaslik: "Lezzet Dünyası",
+    baslik: "İnanılmaz Detaylar",
+    aciklama: "Özenle hazırlanmış soslar ve çeşit çeşit baharatlarla marine edilmiş, közde pişen lezzetler seni bekliyor.",
+    buton: "Menüyü Gör",
+    yol: "/menu",
+    emoji: "🍗",
+    renk: "from-marka to-marka-koyu",
+    gorsel: "",
+  },
+  {
+    anahtar: "panel.2",
+    ustBaslik: "Lezzet Noktaları",
+    baslik: "Sana En Yakın Şube",
+    aciklama: "Dört şehirde, aynı köz lezzetiyle hizmetindeyiz. En yakın Tavacı Mehmet'i bul, sıcak sıcak tadına bak.",
+    buton: "Şubeleri Gör",
+    yol: "/subeler",
+    emoji: "📍",
+    renk: "from-altin to-marka",
+    gorsel: "",
+  },
+  {
+    anahtar: "panel.3",
+    ustBaslik: "Hakkımızda",
+    baslik: "1998'den Beri Köz",
+    aciklama: "Küçük bir mahalle tezgâhında yanan ateş hiç sönmedi. Geleneği bugüne taşıyan hikayemizi keşfet.",
+    buton: "Hikayemiz",
+    yol: "/hakkimizda",
+    emoji: "👨‍🍳",
+    renk: "from-koyu to-marka-koyu",
+    gorsel: "",
+  },
+  {
+    anahtar: "panel.4",
+    ustBaslik: "İletişim",
+    baslik: "Sofranı Hazırlayalım",
+    aciklama: "Sipariş, rezervasyon ve tüm soruların için buradayız. Bir tık uzağındayız.",
+    buton: "Bize Ulaş",
+    yol: "/iletisim",
+    emoji: "📞",
+    renk: "from-marka-koyu to-koyu",
+    gorsel: "",
+  },
+];
+
+// Panelden gelen arka plan görsellerini ve linkleri panellere ata (1..4)
+const { panelGorseller, panelLinkler } = await anasayfaGetir();
+paneller.forEach((p, i) => {
+  p.gorsel = panelGorseller?.[String(i + 1)] || "";
+  p.yol = panelLinkler?.[String(i + 1)] || p.yol;
+});
+---
+
+<section class="py-4">
+  <!-- Bölüm başlığı -->
+  <div class="text-center my-12 px-4" data-aos="fade-up">
+    <h2 class="font-baslik font-extrabold text-3xl md:text-4xl text-koyu" data-i18n="discover.title">Keşfetmeye Başla</h2>
+    <p class="mt-3 text-koyu/60" data-i18n="discover.sub">Tavacı Mehmet dünyasını panel panel gez</p>
+  </div>
+
+  <!-- Zigzag paneller -->
+  {
+    paneller.map((p, i) => {
+      // Çift sıralarda görsel sağda, tek sıralarda solda olsun (zigzag)
+      const gorselSolda = i % 2 === 1;
+      return (
+        <div class="grid md:grid-cols-2 items-stretch min-h-[360px] md:min-h-[440px]">
+          <!-- METİN TARAFI -->
+          <div
+            class={`flex items-center bg-white ${gorselSolda ? "md:order-2" : "md:order-1"}`}
+            data-aos={gorselSolda ? "fade-left" : "fade-right"}
+          >
+            <div class="px-8 md:px-16 py-12 max-w-xl mx-auto md:mx-0">
+              <span class="text-sm font-semibold tracking-wide text-altin uppercase" data-i18n={`${p.anahtar}.tag`}>{p.ustBaslik}</span>
+              <h3 class="mt-2 font-baslik font-extrabold text-3xl md:text-4xl text-marka" data-i18n={`${p.anahtar}.title`}>{p.baslik}</h3>
+              <p class="mt-4 text-koyu/70 leading-relaxed" data-i18n={`${p.anahtar}.desc`}>{p.aciklama}</p>
+              <a
+                href={p.yol}
+                class="group mt-7 inline-flex items-center gap-2 bg-marka hover:bg-marka-koyu text-white font-semibold px-8 py-3.5 rounded-full transition-colors"
+              >
+                <span data-i18n={`${p.anahtar}.btn`}>{p.buton}</span>
+                <span class="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- GÖRSEL TARAFI (placeholder degrade + emoji) -->
+          <a
+            href={p.yol}
+            class={`panel-gorsel group relative overflow-hidden min-h-[260px] md:min-h-0 ${gorselSolda ? "md:order-1" : "md:order-2"}`}
+            data-aos={gorselSolda ? "fade-right" : "fade-left"}
+          >
+            <!-- Arka plan: panelden görsel geldiyse fotoğraf, yoksa degrade + emoji -->
+            {p.gorsel ? (
+              <img src={p.gorsel} alt={p.baslik} loading="lazy" class="panel-bg absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div class={`panel-bg absolute inset-0 bg-gradient-to-br ${p.renk} flex items-center justify-center`}>
+                <span class="text-[8rem] md:text-[10rem] drop-shadow-lg select-none">{p.emoji}</span>
+              </div>
+            )}
+            <!-- Hafif karartma (görsel gelince yazı/ikon okunsun diye) -->
+            <div class="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
+          </a>
+        </div>
+      );
+    })
+  }
+</section>
+
+<style>
+  /* Görselin üzerine gelince yumuşakça yakınlaşması (Ken Burns etkisi) */
+  .panel-bg {
+    transition: transform 0.7s ease;
+  }
+  .panel-gorsel:hover .panel-bg {
+    transform: scale(1.07);
+  }
+</style>

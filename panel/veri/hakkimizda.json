@@ -1,0 +1,13 @@
+{
+  "rakamlar": [
+    { "sayi": "1998", "etiket": "Kuruluş yılı", "etiketEn": "Founded" },
+    { "sayi": "4", "etiket": "Şube", "etiketEn": "Branches" },
+    { "sayi": "120+", "etiket": "Çalışan", "etiketEn": "Employees" },
+    { "sayi": "1M+", "etiket": "Mutlu misafir", "etiketEn": "Happy guests" }
+  ],
+  "degerler": [
+    { "emoji": "🔥", "baslik": "Gerçek Köz", "baslikEn": "Real Charcoal", "metin": "Hiçbir tavamız közsüz pişmez. Lezzetin sırrı ateşte.", "metinEn": "None of our pans cook without charcoal. The secret of flavor is in the fire." },
+    { "emoji": "🌿", "baslik": "Taze Malzeme", "baslikEn": "Fresh Ingredients", "metin": "Her sabah günlük tedarik, dondurulmuş ürün yok.", "metinEn": "Daily supply every morning, no frozen products." },
+    { "emoji": "❤️", "baslik": "Ev Sıcaklığı", "baslikEn": "Home Warmth", "metin": "Misafirimizi aile gibi ağırlarız.", "metinEn": "We welcome our guests like family." }
+  ]
+}

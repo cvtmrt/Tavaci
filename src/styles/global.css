@@ -1,0 +1,64 @@
+/* Tailwind CSS'i içeri aktar */
+@import "tailwindcss";
+
+/* ===========================================================
+   TEMA DEĞİŞKENLERİ (Marka renkleri, fontlar, gölgeler)
+   Tailwind v4'te @theme bloğu ile özel renk/utility üretiyoruz.
+   Örn: bg-marka, text-altin, font-baslik gibi sınıflar oluşur.
+   =========================================================== */
+@theme {
+  /* Marka kırmızısı - ana vurgu rengi (butonlar, başlıklar) */
+  --color-marka: #c1272d;
+  --color-marka-koyu: #9e1d22;
+
+  /* Altın/sarı - ikincil vurgu (yıldızlar, küçük detaylar) */
+  --color-altin: #e6a02c;
+
+  /* Koyu zemin - footer ve üst bar */
+  --color-koyu: #1f1b16;
+
+  /* Krem zemin - sayfa arka planı */
+  --color-krem: #fbf6ee;
+
+  /* Yazı tipleri (Google Fonts head içinde yükleniyor) */
+  --font-baslik: "Poppins", system-ui, sans-serif;
+  --font-govde: "Inter", system-ui, sans-serif;
+}
+
+/* ===========================================================
+   GENEL TABAN STİLLER
+   =========================================================== */
+body {
+  /* Varsayılan gövde fontu ve krem arka plan */
+  font-family: var(--font-govde);
+  background-color: var(--color-krem);
+  color: var(--color-koyu);
+  /* Yatay kaydırmayı engelle: AOS animasyonları (fade-left/right) öğeleri
+     yatayda kaydırdığı için sayfa genişleyebiliyor. "clip" taşmayı kırpar
+     ama "hidden"in aksine sticky header'ı bozmaz. */
+  overflow-x: clip;
+}
+
+/* Tüm başlıklar Poppins kullansın */
+h1, h2, h3, h4 {
+  font-family: var(--font-baslik);
+}
+
+/* Tıklanabilir butonlarda el imleci görünsün (sepet, dil, arama, oklar...) */
+button:not(:disabled),
+[role="button"],
+label[for] {
+  cursor: pointer;
+}
+
+/* Yumuşak kaydırma davranışı (menü bağlantıları için) */
+html {
+  scroll-behavior: smooth;
+}
+
+/* DİL FLASH ÖNLEME: dil Türkçe değilse, çeviri uygulanana kadar
+   gövdeyi gizle. Çeviri bitince DilSecici betiği bu sınıfı kaldırır.
+   Böylece önce Türkçe görünüp İngilizce'ye atlama (flash) olmaz. */
+html.dil-bekle body {
+  visibility: hidden;
+}

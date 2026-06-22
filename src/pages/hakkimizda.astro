@@ -1,0 +1,59 @@
+---
+// ============================================================
+//  HAKKIMIZDA SAYFASI
+//  Markanın hikayesi, değerleri ve rakamlarla özeti.
+// ============================================================
+
+import Layout from "../layouts/Layout.astro";
+import { hakkimizdaGetir } from "../data/icerik.js";
+
+// İstatistikler ve değerler panelden gelir (çift dilli)
+const { rakamlar, degerler } = await hakkimizdaGetir();
+---
+
+<Layout baslik="Hakkımızda | Tavacı Mehmet" aciklama="Tavacı Mehmet'in hikayesi ve değerleri.">
+  <!-- Giriş -->
+  <section class="bg-white border-b border-black/5">
+    <div class="max-w-3xl mx-auto px-4 py-16 text-center">
+      <h1 class="font-baslik font-extrabold text-4xl md:text-5xl text-koyu" data-i18n="about.title">Hikayemiz</h1>
+      <p class="mt-5 text-koyu/70 leading-relaxed" data-i18n="about.intro">
+        1998'de Mehmet Usta'nın küçük bir mahalle tezgâhında yaktığı köz ateşi
+        hiç sönmedi. Bugün aynı tarif, aynı sabır ve aynı sevgiyle dört şehirde
+        sizlerleyiz. Tavacı Mehmet bir restoran zincirinden çok, kuşaktan kuşağa
+        aktarılan bir lezzet geleneğidir.
+      </p>
+    </div>
+  </section>
+
+  <!-- Rakamlarla biz -->
+  <section class="max-w-6xl mx-auto px-4 py-14">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+      {
+        rakamlar.map((r, i) => (
+          <div class="bg-white rounded-2xl py-8 border border-black/5" data-aos="zoom-in" data-aos-delay={i * 100}>
+            <div class="font-baslik font-extrabold text-3xl text-marka">{r.sayi}</div>
+            <div class="mt-1 text-sm text-koyu/60" data-i18n-tr={r.etiket} data-i18n-en={r.etiketEn || r.etiket}>{r.etiket}</div>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Değerlerimiz -->
+  <section class="bg-white py-16">
+    <div class="max-w-6xl mx-auto px-4">
+      <h2 class="font-baslik font-extrabold text-3xl text-koyu text-center mb-12" data-i18n="about.values">Değerlerimiz</h2>
+      <div class="grid gap-6 md:grid-cols-3">
+        {
+          degerler.map((d, i) => (
+            <div class="text-center px-6" data-aos="fade-up" data-aos-delay={i * 120}>
+              <div class="text-5xl">{d.emoji}</div>
+              <h3 class="mt-4 font-baslik font-bold text-xl text-koyu" data-i18n-tr={d.baslik} data-i18n-en={d.baslikEn || d.baslik}>{d.baslik}</h3>
+              <p class="mt-2 text-koyu/60 text-sm leading-relaxed" data-i18n-tr={d.metin} data-i18n-en={d.metinEn || d.metin}>{d.metin}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,151 @@
+---
+// ============================================================
+//  DİL SEÇİCİ (DROPDOWN)
+//  Üst menüdeki 🌐 butonuna basınca, butonun hemen altında
+//  küçük bir açılır panel çıkar. Dil seçilip "Seçim Yap"a
+//  basılınca tüm site o dile çevrilir. Seçim tarayıcıda
+//  (localStorage) saklanır, sonraki ziyaretlerde uygulanır.
+//
+//  Çeviri kaynakları:
+//   - Sabit metinler: "src/i18n/ceviriler.js" sözlüğü (data-i18n)
+//   - Dinamik metinler (menü ürünleri): öğedeki
+//     data-i18n-tr / data-i18n-en öznitelikleri
+// ============================================================
+---
+
+<!-- Buton + açılır panel aynı kapsayıcıda (panel butona göre konumlanır) -->
+<div id="dil-kapsayici" class="relative">
+  <!-- Dil açma butonu (🌐 + güncel dil kodu) -->
+  <button
+    id="dil-ac"
+    aria-label="Dil seç"
+    class="flex items-center gap-1.5 text-sm font-semibold text-white hover:text-altin transition-colors"
+  >
+    <span class="text-lg">🌐</span>
+    <span id="dil-etiket">TR</span>
+  </button>
+
+  <!-- Açılır panel (varsayılan gizli) - butonun hemen altında, sağa hizalı -->
+  <div
+    id="dil-panel"
+    class="hidden absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-2xl border border-black/5 p-5 z-[100]"
+  >
+    <!-- Dil seçimi -->
+    <div class="flex items-center gap-3">
+      <label for="dil-secim" class="font-baslik font-bold text-marka text-sm" data-i18n="lang.title">Dil</label>
+      <select
+        id="dil-secim"
+        class="flex-1 border border-black/15 rounded-lg px-3 py-2 outline-none focus:border-marka text-koyu text-sm"
+      >
+        <option value="tr">TR</option>
+        <option value="en">EN</option>
+      </select>
+    </div>
+
+    <!-- Butonlar -->
+    <div class="mt-4 flex justify-center gap-2">
+      <button
+        id="dil-uygula"
+        class="bg-marka hover:bg-marka-koyu text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors"
+        data-i18n="lang.apply"
+      >
+        Seçim Yap
+      </button>
+      <button
+        id="dil-kapat"
+        class="border border-marka text-marka hover:bg-marka hover:text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors"
+        data-i18n="lang.close"
+      >
+        Kapat
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Çeviri sözlüğünü içeri aktar (derlemede paketlenir)
+  import { ceviriler } from "../i18n/ceviriler.js";
+
+  const kapsayici = document.getElementById("dil-kapsayici");
+  const panel = document.getElementById("dil-panel");
+  const acBtn = document.getElementById("dil-ac");
+  const uygulaBtn = document.getElementById("dil-uygula");
+  const kapatBtn = document.getElementById("dil-kapat");
+  const secim = document.getElementById("dil-secim") as HTMLSelectElement | null;
+  const etiket = document.getElementById("dil-etiket");
+
+  // Geçerli dili oku (kayıtlı yoksa Türkçe)
+  function gecerliDil() {
+    return localStorage.getItem("dil") || "tr";
+  }
+
+  // Çeviriyi verilen kök (document veya gelen sayfa) üzerine uygula.
+  // kok = e.newDocument verilirse, sayfa ekrana gelmeden önce çevrilir
+  // (geçişte Türkçe flash olmaz).
+  function ceviriUygula(dil: string, kok: Document) {
+    const sozluk = (ceviriler as any)[dil] || (ceviriler as any).tr;
+    kok.documentElement.lang = dil;
+
+    // 1) Sabit metinler: data-i18n -> sözlükten doldur
+    kok.querySelectorAll("[data-i18n]").forEach((el) => {
+      const anahtar = el.getAttribute("data-i18n");
+      if (anahtar && sozluk[anahtar] != null) el.textContent = sozluk[anahtar];
+    });
+
+    // 2) Placeholder'lar: data-i18n-ph
+    kok.querySelectorAll("[data-i18n-ph]").forEach((el) => {
+      const anahtar = el.getAttribute("data-i18n-ph");
+      if (anahtar && sozluk[anahtar] != null)
+        (el as HTMLInputElement).placeholder = sozluk[anahtar];
+    });
+
+    // 3) Dinamik metinler (menü ürünleri): data-i18n-tr / data-i18n-en
+    kok.querySelectorAll("[data-i18n-tr]").forEach((el) => {
+      const metin = el.getAttribute(`data-i18n-${dil}`);
+      if (metin != null) el.textContent = metin;
+    });
+  }
+
+  // Mevcut sayfaya uygula + buton etiketini güncelle + gizlemeyi kaldır
+  function diliUygula(dil: string) {
+    ceviriUygula(dil, document);
+    if (etiket) etiket.textContent = dil.toUpperCase();
+    document.documentElement.classList.remove("dil-bekle"); // içeriği göster
+  }
+
+  // Paneli aç/kapat
+  function ac() {
+    if (secim) secim.value = gecerliDil(); // dropdown'u güncel dile ayarla
+    panel?.classList.remove("hidden");
+  }
+  function kapat() {
+    panel?.classList.add("hidden");
+  }
+
+  acBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    panel?.classList.contains("hidden") ? ac() : kapat();
+  });
+  kapatBtn?.addEventListener("click", kapat);
+
+  // "Seçim Yap": dropdown'daki dili kaydet, uygula ve kapat
+  uygulaBtn?.addEventListener("click", () => {
+    const dil = secim?.value || "tr";
+    localStorage.setItem("dil", dil);
+    diliUygula(dil);
+    kapat();
+  });
+
+  // Panel dışına tıklanınca kapat
+  document.addEventListener("click", (e) => {
+    if (kapsayici && !kapsayici.contains(e.target as Node)) kapat();
+  });
+
+  // Sayfa geçişlerinde: yeni sayfa EKRANA GELMEDEN ÖNCE çevir (flash yok)
+  document.addEventListener("astro:before-swap", (e) => {
+    ceviriUygula(gecerliDil(), (e as any).newDocument as Document);
+  });
+
+  // İlk yüklemede kayıtlı dili uygula
+  diliUygula(gecerliDil());
+</script>

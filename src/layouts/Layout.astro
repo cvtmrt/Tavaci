@@ -1,0 +1,141 @@
+---
+// ============================================================
+//  ANA İSKELET (LAYOUT)
+//  Her sayfa bu iskeleti kullanır. <head> ayarları, fontlar,
+//  üst menü (Header) ve alt bilgi (Footer) burada toplanır.
+//  Sayfaya özel içerik <slot /> kısmına yerleşir.
+// ============================================================
+
+// Genel stil dosyasını içeri aktar (Tailwind + tema)
+import "../styles/global.css";
+// AOS (Animate On Scroll) stilleri - kaydırınca beliren animasyonlar
+import "aos/dist/aos.css";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import Sepet from "../components/Sepet.astro";
+// View Transitions: sayfalar arası akıcı geçiş (beyaz flash/titremeyi önler)
+import { ClientRouter } from "astro:transitions";
+// Tema renkleri + animasyon ayarları + iletişim (panelden yönetilir)
+import { temaGetir, anasayfaGetir, ayarlarGetir } from "../data/icerik.js";
+
+// Sayfa başlığını ve açıklamasını dışarıdan alıyoruz (prop)
+const { baslik = "Tavacı Mehmet", aciklama = "Közde pişen efsane tavalar" } = Astro.props;
+
+// Panelde seçilen marka renkleri
+const tema = await temaGetir();
+// Scroll animasyon ayarları
+const { animasyon } = await anasayfaGetir();
+const anim = animasyon || {};
+
+// İletişim (WhatsApp yüzen butonu için)
+const ayarlar = await ayarlarGetir();
+const waNumara = (ayarlar.whatsapp || "").replace(/[^0-9]/g, "");
+---
+
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <title>{baslik}</title>
+    <meta name="description" content={aciklama} />
+
+    <!-- Sayfalar arası yumuşak geçiş -->
+    <ClientRouter />
+
+    <!-- FLASH ÖNLEME: ilk yüklemede kayıtlı dili hemen uygula.
+         Dil Türkçe değilse, çeviri bitene kadar içeriği gizle ki
+         önce Türkçe görünüp sonra İngilizce'ye atlamasın. -->
+    <script is:inline>
+      (function () {
+        var dil = localStorage.getItem("dil") || "tr";
+        document.documentElement.lang = dil;
+        if (dil !== "tr") {
+          document.documentElement.classList.add("dil-bekle");
+          // Güvenlik: çeviri bir hata yüzünden gelmezse içerik gizli kalmasın
+          setTimeout(function () {
+            document.documentElement.classList.remove("dil-bekle");
+          }, 1500);
+        }
+      })();
+    </script>
+
+    <!-- Google Fonts: Poppins (başlık) + Inter (gövde) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- TEMA RENKLERİ: panelden seçilen renkler Tailwind değişkenlerini ezer.
+         (En sonda olduğu için global stilin üzerine yazar.) -->
+    <style is:inline set:html={`:root{
+      --color-marka:${tema.marka};
+      --color-marka-koyu:${tema.markaKoyu};
+      --color-altin:${tema.altin};
+      --color-koyu:${tema.koyu};
+      --color-krem:${tema.krem};
+    }`}></style>
+  </head>
+  <body
+    class="min-h-screen flex flex-col"
+    data-aos-acik={String(anim.scrollAcik !== false)}
+    data-aos-sure={String(anim.scrollSure ?? 700)}
+  >
+    <!-- Üst menü (persist, header elementinin içinde tanımlı) -->
+    <Header />
+
+    <!-- Sayfaya özel içerik buraya gelir -->
+    <main class="flex-1">
+      <slot />
+    </main>
+
+    <!-- Alt bilgi -->
+    <Footer />
+
+    <!-- Sepet (buton + çekmece), tüm sayfalarda kalıcı -->
+    <Sepet transition:persist />
+
+    <!-- Yüzen WhatsApp butonu (numara panelde tanımlıysa görünür) -->
+    {
+      waNumara && (
+        <a
+          href={`https://wa.me/${waNumara}?text=${encodeURIComponent("Merhaba, sipariş vermek istiyorum.")}`}
+          target="_blank"
+          rel="noopener"
+          aria-label="WhatsApp"
+          class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+        >
+          <svg viewBox="0 0 32 32" class="w-8 h-8" fill="currentColor" aria-hidden="true">
+            <path d="M16 3C9 3 3.5 8.6 3.5 15.5c0 2.4.7 4.7 1.9 6.7L3 29l7-1.8c1.9 1 4 1.6 6 1.6 6.9 0 12.5-5.6 12.5-12.5S22.9 3 16 3zm0 22.7c-1.8 0-3.6-.5-5.1-1.4l-.4-.2-4.2 1.1 1.1-4-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.6 4.6-10.2 10.3-10.2 5.7 0 10.2 4.6 10.2 10.2 0 5.7-4.6 10.4-10.2 10.4zm5.7-7.6c-.3-.2-1.8-.9-2.1-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-1.8-.9-3-1.6-4.2-3.6-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.6-.1-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.3 5.2 4.6 2 .8 2.7.9 3.7.8.6-.1 1.8-.7 2-1.5.3-.7.3-1.4.2-1.5-.1-.2-.3-.3-.6-.4z"/>
+          </svg>
+        </a>
+      )
+    }
+
+    <!-- AOS başlatma: data-aos taşıyan öğeler ekranda görününce animasyonla belirir -->
+    <script>
+      import AOS from "aos";
+      function aosBaslat() {
+        const acik = document.body.dataset.aosAcik !== "false";
+        const sure = parseInt(document.body.dataset.aosSure || "700") || 700;
+        if (!acik) {
+          // Animasyon kapalıysa data-aos'ları kaldır -> öğeler normal görünür
+          document.querySelectorAll("[data-aos]").forEach((el) => el.removeAttribute("data-aos"));
+          return;
+        }
+        AOS.init({
+          duration: sure, // animasyon süresi (ms) - panelden
+          once: true, // her öğe yalnızca bir kez animasyon yapsın
+          offset: 80, // öğe ekranın bu kadar altına gelince tetiklensin
+          easing: "ease-out-cubic",
+        });
+      }
+      aosBaslat();
+      // Her sayfa geçişinden sonra yeni içeriği yeniden tara
+      document.addEventListener("astro:after-swap", aosBaslat);
+    </script>
+  </body>
+</html>

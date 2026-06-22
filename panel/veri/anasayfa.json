@@ -1,0 +1,82 @@
+{
+  "bolumler": {
+    "hero": true,
+    "kesfet": true,
+    "hikaye": true,
+    "instagram": true,
+    "cta": true
+  },
+  "heroSlaytlar": [
+    {
+      "id": "h1",
+      "ustBaslik": "1998'den ",
+      "ustBaslikEn": "Since 1998",
+      "baslik": "Közde pişen efsane lezzetler",
+      "baslikEn": "Legendary flavors cooked over embers",
+      "altYazi": "Kendi tavanda, közün dumanıyla pişen tavuk ve köfteler.",
+      "altYaziEn": "Chicken and meatballs cooked in your own pan over real charcoal.",
+      "buton": "Menüyü Keşfet",
+      "butonEn": "Explore the Menu",
+      "link": "/menu",
+      "gorsel": "",
+      "renk": "from-marka to-marka-koyu",
+      "emoji": "🍗"
+    },
+    {
+      "id": "h2",
+      "ustBaslik": "Kampanya",
+      "ustBaslikEn": "Campaign",
+      "baslik": "Kampüs Menü artık çok uygun",
+      "baslikEn": "The Campus Menu is now great value",
+      "altYazi": "Tavada tavuk, penne, salata ve içecek bir arada.",
+      "altYaziEn": "Pan-cooked chicken, penne, salad and a drink together.",
+      "buton": "Hemen Sipariş Ver",
+      "butonEn": "Order Now",
+      "link": "/iletisim",
+      "gorsel": "",
+      "renk": "from-altin to-marka",
+      "emoji": "🍽️"
+    },
+    {
+      "id": "h3",
+      "ustBaslik": "Yeni",
+      "ustBaslikEn": "New",
+      "baslik": "Tavacı Sokak Lezzetleri",
+      "baslikEn": "Tavacı Street Flavors",
+      "altYazi": "Dürümden burgere, sokağın enerjisi sofranda.",
+      "altYaziEn": "From wraps to burgers, street energy on your table.",
+      "buton": "Keşfet",
+      "butonEn": "Discover",
+      "link": "/menu",
+      "gorsel": "",
+      "renk": "from-koyu to-marka-koyu",
+      "emoji": "🌯"
+    }
+  ],
+  "panelGorseller": {
+    "1": "/yuklenenler/imgmqgw0ruc839.jpeg",
+    "2": "",
+    "3": "",
+    "4": ""
+  },
+  "panelLinkler": {
+    "1": "/menu",
+    "2": "/subeler",
+    "3": "/hakkimizda",
+    "4": "/iletisim"
+  },
+  "hikaye": {
+    "emoji": "👨‍🍳",
+    "link": "/hakkimizda"
+  },
+  "cta": {
+    "link": "/iletisim"
+  },
+  "animasyon": {
+    "heroEfekt": "slide",
+    "heroSure": 1,
+    "heroOtomatik": true,
+    "scrollAcik": true,
+    "scrollSure": 700
+  }
+}

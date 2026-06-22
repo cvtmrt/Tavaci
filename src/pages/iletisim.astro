@@ -1,0 +1,109 @@
+---
+// ============================================================
+//  İLETİŞİM SAYFASI
+//  İletişim bilgileri + basit bir sipariş/iletişim formu.
+//  Form şimdilik gönderildiğinde sadece teşekkür mesajı gösterir
+//  (gerçek bir sunucuya bağlanması ileride eklenebilir).
+// ============================================================
+
+import Layout from "../layouts/Layout.astro";
+import { ayarlarGetir } from "../data/icerik.js";
+
+// İletişim bilgileri panelden gelir
+const ayarlar = await ayarlarGetir();
+const waNumara = (ayarlar.whatsapp || "").replace(/[^0-9]/g, "");
+---
+
+<Layout baslik="İletişim | Tavacı Mehmet" aciklama="Bize ulaşın, sipariş verin.">
+  <section class="max-w-6xl mx-auto px-4 py-16 grid md:grid-cols-2 gap-12">
+    <!-- Sol: iletişim bilgileri -->
+    <div>
+      <h1 class="font-baslik font-extrabold text-4xl text-koyu" data-i18n="contact.title">Bize Ulaşın</h1>
+      <p class="mt-4 text-koyu/70" data-i18n="contact.sub">
+        Sipariş, rezervasyon veya görüşleriniz için buradayız.
+      </p>
+
+      <ul class="mt-8 space-y-5">
+        <li class="flex items-start gap-3">
+          <span class="text-2xl">📞</span>
+          <div>
+            <div class="font-semibold text-koyu" data-i18n="contact.phone">Telefon</div>
+            <div class="text-koyu/60 text-sm">{ayarlar.telefon}</div>
+          </div>
+        </li>
+        <li class="flex items-start gap-3">
+          <span class="text-2xl">✉️</span>
+          <div>
+            <div class="font-semibold text-koyu" data-i18n="contact.email">E-posta</div>
+            <div class="text-koyu/60 text-sm">{ayarlar.eposta}</div>
+          </div>
+        </li>
+        <li class="flex items-start gap-3">
+          <span class="text-2xl">🕒</span>
+          <div>
+            <div class="font-semibold text-koyu" data-i18n="contact.hours">Çalışma Saatleri</div>
+            <div class="text-koyu/60 text-sm" data-i18n="contact.hoursVal">Her gün 11:00 - 23:00</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Sağ: iletişim formu -->
+    <div class="bg-white rounded-2xl p-8 border border-black/5 shadow-sm">
+      <form id="iletisim-formu" class="space-y-5" data-wa={waNumara}>
+        <div>
+          <label class="block text-sm font-medium text-koyu mb-1" for="ad" data-i18n="form.name">Ad Soyad</label>
+          <input id="ad" name="ad" type="text" required
+            class="w-full rounded-lg border border-black/10 px-4 py-2.5 focus:border-marka focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-koyu mb-1" for="telefon" data-i18n="form.phone">Telefon</label>
+          <input id="telefon" name="telefon" type="tel" required
+            class="w-full rounded-lg border border-black/10 px-4 py-2.5 focus:border-marka focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-koyu mb-1" for="mesaj" data-i18n="form.message">Mesajınız</label>
+          <textarea id="mesaj" name="mesaj" rows="4" required
+            class="w-full rounded-lg border border-black/10 px-4 py-2.5 focus:border-marka focus:outline-none"></textarea>
+        </div>
+        <button type="submit" data-i18n="form.send"
+          class="w-full bg-marka hover:bg-marka-koyu text-white font-semibold py-3 rounded-full transition-colors">
+          Gönder
+        </button>
+
+        <!-- Form gönderilince burada teşekkür mesajı görünür -->
+        <p id="tesekkur" data-i18n="form.thanks" class="hidden text-center text-green-700 font-medium">
+          Teşekkürler! En kısa sürede size dönüş yapacağız. 🎉
+        </p>
+      </form>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  // Form gönderimini yakala: sayfa yenilenmesin, teşekkür mesajı çıksın.
+  // (Gerçek projede burada veriyi bir sunucuya/e-postaya iletirsin.)
+  // astro:page-load ile her sayfa geçişinde yeniden bağlanır (View Transitions).
+  function formBagla() {
+    const form = document.getElementById("iletisim-formu") as HTMLFormElement | null;
+    const tesekkur = document.getElementById("tesekkur");
+    if (!form || form.dataset.bagli) return; // çift bağlamayı önle
+    form.dataset.bagli = "1";
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const wa = form.dataset.wa;
+      const ad = (document.getElementById("ad") as HTMLInputElement)?.value || "";
+      const tel = (document.getElementById("telefon") as HTMLInputElement)?.value || "";
+      const mesaj = (document.getElementById("mesaj") as HTMLTextAreaElement)?.value || "";
+      // WhatsApp numarası tanımlıysa mesajı WhatsApp'ta aç
+      if (wa) {
+        const metin = `Merhaba, ben ${ad}.\nTelefon: ${tel}\n\n${mesaj}`;
+        window.open(`https://wa.me/${wa}?text=${encodeURIComponent(metin)}`, "_blank");
+      }
+      form.reset();
+      tesekkur?.classList.remove("hidden"); // teşekkür mesajını göster
+    });
+  }
+  formBagla();
+  document.addEventListener("astro:page-load", formBagla);
+</script>

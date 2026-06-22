@@ -1,0 +1,248 @@
+---
+// ============================================================
+//  SİTE İÇİ ARAMA
+//  Üst menüdeki 🔍 butonuna basınca açılan arama penceresi.
+//  Menü ürünleri, kategoriler, şubeler ve sayfalar arasında
+//  anlık (tarayıcı tarafında) arama yapar.
+//
+//  Çalışma mantığı:
+//  1) Aşağıda tüm içerikten bir "arama indeksi" üretiyoruz.
+//  2) İndeksi gizli bir <script type="application/json"> içine koyuyoruz.
+//  3) Alttaki istemci betiği yazdıkça bu indeksi filtreleyip sonuç gösteriyor.
+// ============================================================
+
+import { menuGetir, subeleriGetir } from "../data/icerik.js";
+
+// Panelden (Sanity) veya yerel yedekten içeriği al
+const menu = await menuGetir();
+const subeler = await subeleriGetir();
+
+// --- Arama indeksi: { tur, baslik, aciklama, url } ---
+const indeks = [];
+
+// Her kayıt çift dilli: baslik/baslikEn, aciklama/aciklamaEn.
+// Arama her iki dilde de eşleşir; sonuç seçili dilde gösterilir.
+
+// 1) Sabit sayfalar (anahtar kelimelerle zenginleştirilmiş)
+indeks.push(
+  { tur: "Sayfa", baslik: "Anasayfa", baslikEn: "Home", aciklama: "köz tava tavuk efsane lezzet", aciklamaEn: "charcoal pan chicken flavor", url: "/" },
+  { tur: "Sayfa", baslik: "Menü", baslikEn: "Menu", aciklama: "tüm ürünler lezzetler fiyat sipariş", aciklamaEn: "all products flavors price order", url: "/menu" },
+  { tur: "Sayfa", baslik: "Şubeler", baslikEn: "Locations", aciklama: "lokasyon adres konum en yakın şube", aciklamaEn: "location address nearest branch", url: "/subeler" },
+  { tur: "Sayfa", baslik: "Hakkımızda", baslikEn: "About Us", aciklama: "hikaye 1998 değerler köz taze malzeme ev sıcaklığı franchise", aciklamaEn: "story values charcoal fresh ingredients franchise", url: "/hakkimizda" },
+  { tur: "Sayfa", baslik: "İletişim", baslikEn: "Contact", aciklama: "telefon e-posta sipariş rezervasyon ulaşım iletişim", aciklamaEn: "phone email order reservation contact", url: "/iletisim" },
+);
+
+// 2) Menü kategorileri ve ürünleri (kendi sayfalarına bağlanır)
+for (const kat of menu) {
+  indeks.push({
+    tur: "Kategori",
+    baslik: kat.kategori,
+    baslikEn: kat.kategoriEn || kat.kategori,
+    aciklama: "menü kategorisi",
+    aciklamaEn: "menu category",
+    url: `/menu/${kat.slug}`,
+  });
+  for (const urun of kat.urunler) {
+    indeks.push({
+      tur: "Ürün",
+      baslik: urun.ad,
+      baslikEn: urun.adEn || urun.ad,
+      aciklama: `${kat.kategori} · ${urun.aciklama} ${urun.fiyat}`.trim(),
+      aciklamaEn: `${kat.kategoriEn || kat.kategori} · ${urun.aciklamaEn || ""} ${urun.fiyat}`.trim(),
+      url: `/menu/${kat.slug}/${urun.slug}`,
+    });
+  }
+}
+
+// 3) Şubeler (şehir/adres özel isim - aynı kalır)
+for (const s of subeler) {
+  indeks.push({
+    tur: "Şube",
+    baslik: `${s.sehir} - ${s.semt}`,
+    baslikEn: `${s.sehir} - ${s.semt}`,
+    aciklama: s.adres,
+    aciklamaEn: s.adres,
+    url: "/subeler",
+  });
+}
+---
+
+<!-- Arama açma butonu (üst menüye yerleştirilir) -->
+<button
+  id="arama-ac"
+  aria-label="Ara"
+  class="text-xl text-white hover:text-altin transition-colors"
+>
+  🔍
+</button>
+
+<!-- Arama indeksini gizlice sayfaya göm -->
+<script type="application/json" id="arama-indeksi" set:html={JSON.stringify(indeks)} />
+
+<!-- Arama penceresi (varsayılan gizli) - üstte tam genişlikte bar -->
+<div id="arama-modal" class="hidden fixed inset-0 z-[100]">
+  <!-- Arka plan karartması (tıklanınca kapanır) -->
+  <div id="arama-arkaplan" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+  <!-- Üst arama barı (tam genişlik, marka renginde) -->
+  <div class="relative bg-marka shadow-xl">
+    <div class="max-w-5xl mx-auto px-4 py-5 flex items-center gap-4">
+      <!-- Büyük arama kutusu -->
+      <input
+        id="arama-input"
+        type="text"
+        placeholder="Menü, şube, sayfa... her şeyi ara"
+        data-i18n-ph="search.placeholder"
+        class="flex-1 text-lg bg-white rounded-full px-7 py-3.5 outline-none text-koyu placeholder:text-koyu/40 shadow-sm"
+        autocomplete="off"
+      />
+      <!-- Arama ikonu (dekoratif, yuvarlak) -->
+      <span class="hidden sm:flex w-12 h-12 items-center justify-center rounded-full border-2 border-white/50 text-white text-xl shrink-0">
+        🔍
+      </span>
+      <!-- Kapat butonu -->
+      <button
+        id="arama-kapat"
+        aria-label="Kapat"
+        class="w-12 h-12 flex items-center justify-center rounded-full border-2 border-white/50 text-white hover:bg-white hover:text-marka text-xl transition-colors shrink-0"
+      >
+        ✕
+      </button>
+    </div>
+  </div>
+
+  <!-- Sonuç paneli (barın hemen altında, ortalı beyaz kart) -->
+  <div class="relative max-w-3xl mx-auto px-4">
+    <div class="bg-white rounded-b-2xl shadow-2xl overflow-hidden">
+      <!-- Sonuç listesi -->
+      <ul id="arama-sonuc" class="max-h-[60vh] overflow-y-auto"></ul>
+
+      <!-- Boş / başlangıç durumu mesajı -->
+      <p id="arama-bos" data-i18n="search.start" class="px-5 py-8 text-center text-sm text-koyu/50">
+        Aramak için yazmaya başla…
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // İndeksi oku
+  const indeks = JSON.parse(
+    document.getElementById("arama-indeksi")?.textContent || "[]"
+  );
+
+  // Öğeler
+  const modal = document.getElementById("arama-modal");
+  const acBtn = document.getElementById("arama-ac");
+  const kapatBtn = document.getElementById("arama-kapat");
+  const arkaplan = document.getElementById("arama-arkaplan");
+  const input = document.getElementById("arama-input") as HTMLInputElement | null;
+  const sonucEl = document.getElementById("arama-sonuc");
+  const bosEl = document.getElementById("arama-bos");
+
+  // Türkçe duyarlı küçük harfe çevirme (arama karşılaştırması için)
+  const kucult = (m: string) => (m || "").toLocaleLowerCase("tr");
+
+  // Pencereyi aç
+  function ac() {
+    modal?.classList.remove("hidden");
+    document.body.style.overflow = "hidden"; // arka plan kaymasın
+    setTimeout(() => input?.focus(), 30);
+  }
+  // Pencereyi kapat
+  function kapat() {
+    modal?.classList.add("hidden");
+    document.body.style.overflow = "";
+  }
+
+  acBtn?.addEventListener("click", ac);
+  kapatBtn?.addEventListener("click", kapat);
+  arkaplan?.addEventListener("click", kapat);
+
+  // Geçerli dil (dil seçici ile kaydedilir)
+  const gecerliDil = () => localStorage.getItem("dil") || "tr";
+
+  // Her bir sonuç türü için küçük renkli etiket rengi
+  function turRengi(tur: string) {
+    if (tur === "Ürün") return "bg-marka/10 text-marka";
+    if (tur === "Kategori") return "bg-altin/20 text-altin";
+    if (tur === "Şube") return "bg-green-100 text-green-700";
+    return "bg-koyu/10 text-koyu/70"; // Sayfa
+  }
+
+  // Tür etiketinin ve arayüz metinlerinin dile göre karşılığı
+  const metinler: any = {
+    tr: { Ürün: "Ürün", Kategori: "Kategori", Şube: "Şube", Sayfa: "Sayfa",
+          basla: "Aramak için yazmaya başla…", yok: (q: string) => `"${q}" için sonuç bulunamadı.` },
+    en: { Ürün: "Product", Kategori: "Category", Şube: "Branch", Sayfa: "Page",
+          basla: "Start typing to search…", yok: (q: string) => `No results for "${q}".` },
+  };
+
+  // Arama yap ve sonuçları çiz
+  function ara() {
+    const dil = gecerliDil();
+    const m = metinler[dil] || metinler.tr;
+    const sorgu = kucult(input?.value.trim() || "");
+
+    // Sorgu boşsa başlangıç durumuna dön
+    if (!sorgu) {
+      sonucEl!.innerHTML = "";
+      bosEl!.textContent = m.basla;
+      bosEl!.classList.remove("hidden");
+      return;
+    }
+
+    // Yalnızca seçili dilde eşleştir (TR'de Türkçe, EN'de İngilizce)
+    const bulunan = indeks
+      .map((x: any) => {
+        // Gösterilecek ve eşleştirilecek metinler: seçili dil
+        const baslik = dil === "en" ? x.baslikEn || x.baslik : x.baslik;
+        const aciklama = dil === "en" ? x.aciklamaEn || x.aciklama : x.aciklama;
+        const b = kucult(baslik);
+        const a = kucult(aciklama);
+        let puan = -1;
+        if (b.startsWith(sorgu)) puan = 0;
+        else if (b.includes(sorgu)) puan = 1;
+        else if (a.includes(sorgu)) puan = 2;
+        return { ...x, baslik, aciklama, puan };
+      })
+      .filter((x: any) => x.puan >= 0)
+      .sort((a: any, b: any) => a.puan - b.puan)
+      .slice(0, 25);
+
+    if (bulunan.length === 0) {
+      sonucEl!.innerHTML = "";
+      bosEl!.textContent = m.yok(input?.value || "");
+      bosEl!.classList.remove("hidden");
+      return;
+    }
+
+    bosEl!.classList.add("hidden");
+    sonucEl!.innerHTML = bulunan
+      .map(
+        (x: any) => `
+        <li>
+          <a href="${x.url}" class="flex items-center gap-3 px-5 py-3 hover:bg-krem transition-colors border-b border-black/5">
+            <span class="text-xs font-semibold px-2 py-1 rounded-full ${turRengi(x.tur)}">${m[x.tur] || x.tur}</span>
+            <span class="flex-1 min-w-0">
+              <span class="block font-medium text-koyu truncate">${x.baslik}</span>
+              <span class="block text-xs text-koyu/50 truncate">${x.aciklama}</span>
+            </span>
+            <span class="text-koyu/30">↵</span>
+          </a>
+        </li>`
+      )
+      .join("");
+  }
+
+  input?.addEventListener("input", ara);
+
+  // Klavye kısayolları: "/" veya Ctrl+K ile aç, Esc ile kapat
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") kapat();
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      ac();
+    }
+  });
+</script>

@@ -1,0 +1,74 @@
+---
+// ============================================================
+//  ALT BİLGİ (FOOTER)
+//  İletişim bilgileri, hızlı bağlantılar ve telif satırı.
+// ============================================================
+
+import { ayarlarGetir, subeleriGetir } from "../data/icerik.js";
+
+// İletişim bilgileri + şube sayısı panelden gelir
+const ayarlar = await ayarlarGetir();
+const subeSayisi = (await subeleriGetir()).length;
+
+// İçinde bulunulan yılı otomatik göster (telif satırı için)
+const yil = new Date().getFullYear();
+---
+
+<footer class="bg-koyu text-krem mt-20">
+  <div class="max-w-6xl mx-auto px-4 py-12 grid gap-10 md:grid-cols-3">
+    <!-- Marka tanıtımı (logo - koyu zeminde görünsün diye beyaz zeminde) -->
+    <div>
+      <img src="/logo.png" alt="Tavacı Mehmet Efendi" class="h-16 w-auto object-contain bg-white rounded-xl p-2" />
+      <p class="mt-3 text-sm text-krem/70 leading-relaxed" data-i18n="footer.tagline">
+        Közde pişen tavalarıyla 1998'den beri sofralarınızda. Geleneksel
+        lezzeti modern bir dokunuşla buluşturuyoruz.
+      </p>
+    </div>
+
+    <!-- Hızlı bağlantılar -->
+    <div>
+      <h4 class="font-semibold text-altin mb-3" data-i18n="footer.quick">Hızlı Bağlantılar</h4>
+      <ul class="space-y-2 text-sm text-krem/70">
+        <li><a href="/menu" class="hover:text-white" data-i18n="nav.menu">Menü</a></li>
+        <li><a href="/subeler" class="hover:text-white" data-i18n="nav.branches">Şubeler</a></li>
+        <li><a href="/hakkimizda" class="hover:text-white" data-i18n="nav.about">Hakkımızda</a></li>
+        <li><a href="/iletisim" class="hover:text-white" data-i18n="nav.contact">İletişim</a></li>
+      </ul>
+    </div>
+
+    <!-- İletişim -->
+    <div>
+      <h4 class="font-semibold text-altin mb-3" data-i18n="footer.contact">Bize Ulaşın</h4>
+      <ul class="space-y-2 text-sm text-krem/70">
+        <li>📞 {ayarlar.telefon}</li>
+        <li>✉️ {ayarlar.eposta}</li>
+        <li>📍 {subeSayisi} şube</li>
+      </ul>
+
+      <!-- Sosyal medya bağlantıları -->
+      <div class="mt-4 flex gap-3">
+        <a
+          href={ayarlar.instagram}
+          target="_blank"
+          rel="noopener"
+          aria-label="Instagram"
+          class="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-altin hover:text-koyu transition-colors"
+        >
+          📷
+        </a>
+        <a
+          href="#"
+          aria-label="Facebook"
+          class="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-altin hover:text-koyu transition-colors"
+        >
+          👍
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Telif satırı -->
+  <div class="border-t border-white/10 py-4 text-center text-xs text-krem/50">
+    © {yil} Tavacı Mehmet. <span data-i18n="footer.rights">Tüm hakları saklıdır.</span>
+  </div>
+</footer>

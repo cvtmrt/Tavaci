@@ -1,0 +1,177 @@
+---
+// ============================================================
+//  HERO SLIDER (Anasayfa üst görseli)
+//  Swiper ile otomatik dönen, yumuşak "fade" geçişli slider.
+//  Slaytlar PANELDEN gelir (Anasayfa sekmesi): metin (TR/EN),
+//  buton linki, arka plan görseli veya degrade rengi.
+// ============================================================
+
+import { anasayfaGetir } from "../data/icerik.js";
+
+const { heroSlaytlar, animasyon } = await anasayfaGetir();
+const slaytlar = heroSlaytlar || [];
+const anim = animasyon || {};
+---
+
+<!-- Swiper kapsayıcı (animasyon ayarları data-* ile betiğe geçer) -->
+<div
+  class="hero-swiper swiper relative"
+  data-efekt={anim.heroEfekt || "fade"}
+  data-sure={String(anim.heroSure ?? 4.5)}
+  data-otomatik={String(anim.heroOtomatik !== false)}
+>
+  <div class="swiper-wrapper">
+    {
+      slaytlar.map((s) => (
+        <div class="swiper-slide">
+          <div class={`relative overflow-hidden bg-gradient-to-br ${s.renk || "from-marka to-marka-koyu"} text-white`}>
+            {/* Arka plan görseli (panelden yüklendiyse) + karartma */}
+            {s.gorsel && (
+              <img src={s.gorsel} alt={s.baslik} class="absolute inset-0 w-full h-full object-cover" />
+            )}
+            {s.gorsel && <div class="absolute inset-0 bg-black/45" />}
+
+            <div class="relative max-w-6xl mx-auto px-4 py-20 md:py-28 grid md:grid-cols-2 gap-10 items-center min-h-[70vh]">
+              <!-- Sol: metin (kendi içinde sıralı belirme animasyonu) -->
+              <div>
+                <span class="hero-anim inline-block bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full mb-4" data-i18n-tr={s.ustBaslik} data-i18n-en={s.ustBaslikEn || s.ustBaslik}>
+                  {s.ustBaslik}
+                </span>
+                <h1 class="hero-anim font-baslik font-extrabold text-4xl md:text-6xl leading-tight" data-i18n-tr={s.baslik} data-i18n-en={s.baslikEn || s.baslik}>
+                  {s.baslik}
+                </h1>
+                <p class="hero-anim mt-5 text-lg text-white/85 max-w-md" data-i18n-tr={s.altYazi} data-i18n-en={s.altYaziEn || s.altYazi}>{s.altYazi}</p>
+                <div class="hero-anim mt-8">
+                  <a
+                    href={s.link || "/menu"}
+                    data-i18n-tr={s.buton}
+                    data-i18n-en={s.butonEn || s.buton}
+                    class="inline-block bg-white text-marka font-semibold px-7 py-3.5 rounded-full hover:bg-krem transition-colors"
+                  >
+                    {s.buton}
+                  </a>
+                </div>
+              </div>
+
+              <!-- Sağ: görsel yoksa büyük emoji daire göster -->
+              {!s.gorsel && (
+                <div class="hidden md:flex justify-center">
+                  <div class="w-80 h-80 rounded-full bg-white/15 flex items-center justify-center text-[12rem] shadow-2xl">
+                    {s.emoji || "🍗"}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <!-- Alt noktalar (sayfalama) -->
+  <div class="swiper-pagination"></div>
+
+  <!-- Sağ/sol ok tuşları (manuel kaydırma) -->
+  <button class="hero-prev hidden md:flex" aria-label="Önceki">‹</button>
+  <button class="hero-next hidden md:flex" aria-label="Sonraki">›</button>
+</div>
+
+<script>
+  // Swiper'ı ve gerekli modülleri içeri aktar
+  import Swiper from "swiper";
+  import { Autoplay, EffectFade, Pagination, Navigation } from "swiper/modules";
+  import "swiper/css";
+  import "swiper/css/effect-fade";
+  import "swiper/css/pagination";
+  import "swiper/css/navigation";
+
+  // Slider'ı başlat: yumuşak geçiş (fade), otomatik dönme, noktalar + ok tuşları
+  function heroBaslat() {
+    const el = document.querySelector(".hero-swiper") as HTMLElement | null;
+    // Yoksa veya zaten başlatılmışsa atla (View Transitions'da çift başlatmayı önler)
+    if (!el || el.classList.contains("swiper-initialized")) return;
+
+    // Panelden gelen animasyon ayarları
+    const efekt = el.dataset.efekt === "slide" ? "slide" : "fade";
+    const otomatik = el.dataset.otomatik !== "false";
+    const sure = (parseFloat(el.dataset.sure || "4.5") || 4.5) * 1000;
+
+    new Swiper(el, {
+      modules: [Autoplay, EffectFade, Pagination, Navigation],
+      effect: efekt, // panelden: yumuşak geçiş (fade) ya da kayma (slide)
+      fadeEffect: { crossFade: true },
+      loop: true,
+      speed: 800,
+      autoplay: otomatik ? { delay: sure, disableOnInteraction: false } : false,
+      pagination: { el: ".hero-swiper .swiper-pagination", clickable: true },
+      // Ok tuşları ile manuel geçiş
+      navigation: { prevEl: ".hero-prev", nextEl: ".hero-next" },
+    });
+  }
+  heroBaslat();
+  // Her sayfa geçişinden sonra (anasayfaya dönülünce) yeniden başlat
+  document.addEventListener("astro:page-load", heroBaslat);
+</script>
+
+<style>
+  /* Alt nokta göstergeleri (slayt geçişi) - her zeminde net görünür */
+  .hero-swiper :global(.swiper-pagination) {
+    bottom: 1.5rem;
+  }
+  .hero-swiper :global(.swiper-pagination-bullet) {
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.6);
+    opacity: 1;
+    /* Açık zeminlerde de görünsün diye hafif gölge */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transition: width 0.3s ease, background 0.3s ease;
+  }
+  .hero-swiper :global(.swiper-pagination-bullet-active) {
+    width: 30px;
+    border-radius: 999px;
+    background: var(--color-altin);
+  }
+
+  /* Aktif slayttaki metinler sırayla aşağıdan yukarı belirsin */
+  .swiper-slide-active .hero-anim {
+    animation: heroGir 0.6s ease both;
+  }
+  .swiper-slide-active .hero-anim:nth-child(1) { animation-delay: 0.1s; }
+  .swiper-slide-active .hero-anim:nth-child(2) { animation-delay: 0.25s; }
+  .swiper-slide-active .hero-anim:nth-child(3) { animation-delay: 0.4s; }
+  .swiper-slide-active .hero-anim:nth-child(4) { animation-delay: 0.55s; }
+
+  @keyframes heroGir {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Sağ/sol ok tuşları - yuvarlak, yarı saydam, hover'da belirginleşir */
+  .hero-prev,
+  .hero-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 48px;
+    height: 48px;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    line-height: 1;
+    color: white;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: background 0.25s, transform 0.25s;
+    padding-bottom: 4px;
+  }
+  .hero-prev { left: 1.5rem; }
+  .hero-next { right: 1.5rem; }
+  .hero-prev:hover,
+  .hero-next:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-50%) scale(1.1);
+  }
+</style>

@@ -1,0 +1,65 @@
+---
+// ============================================================
+//  ŞUBELER SAYFASI
+//  Tüm şubeleri kart halinde listeler.
+//  Veri "src/data/subeler.js" dosyasından gelir.
+// ============================================================
+
+import Layout from "../layouts/Layout.astro";
+import { subeleriGetir } from "../data/icerik.js";
+
+// Panelden (Sanity) veya yerel yedekten şubeleri al
+const subeler = await subeleriGetir();
+---
+
+<Layout baslik="Şubeler | Tavacı Mehmet" aciklama="Türkiye genelindeki Tavacı Mehmet şubeleri.">
+  <!-- Sayfa başlığı -->
+  <section class="bg-white border-b border-black/5">
+    <div class="max-w-6xl mx-auto px-4 py-14 text-center">
+      <h1 class="font-baslik font-extrabold text-4xl md:text-5xl text-koyu" data-i18n="branches.title">Şubelerimiz</h1>
+      <p class="mt-3 text-koyu/60" data-i18n="branches.sub">Size en yakın Tavacı Mehmet'i bulun</p>
+    </div>
+  </section>
+
+  <!-- Şube kartları (harita + yol tarifi ile) -->
+  <div class="max-w-6xl mx-auto px-4 py-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    {
+      subeler.map((sube, i) => {
+        const sorgu = encodeURIComponent(`${sube.adres} ${sube.sehir}`);
+        return (
+          <div
+            class="bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col"
+            data-aos="fade-up"
+            data-aos-delay={(i % 3) * 100}
+          >
+            <!-- Gömülü harita (anahtar gerektirmez) -->
+            <iframe
+              src={`https://maps.google.com/maps?q=${sorgu}&z=15&output=embed`}
+              class="w-full h-40 border-0"
+              loading="lazy"
+              title={`${sube.sehir} ${sube.semt} harita`}
+            />
+            <div class="p-6 flex flex-col flex-1">
+              <div class="flex items-center gap-2 text-marka font-semibold">
+                📍 {sube.sehir} - {sube.semt}
+              </div>
+              <p class="mt-3 text-sm text-koyu/65 leading-relaxed">{sube.adres}</p>
+              <div class="mt-4 pt-4 border-t border-black/5 space-y-1 text-sm text-koyu/70">
+                <p>📞 {sube.telefon}</p>
+                <p>🕒 {sube.saat}</p>
+              </div>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${sorgu}`}
+                target="_blank"
+                rel="noopener"
+                class="mt-4 inline-flex items-center justify-center gap-2 bg-marka/10 text-marka font-semibold text-sm px-4 py-2.5 rounded-full hover:bg-marka hover:text-white transition-colors"
+              >
+                🧭 <span data-i18n="branches.directions">Yol Tarifi</span>
+              </a>
+            </div>
+          </div>
+        );
+      })
+    }
+  </div>
+</Layout>

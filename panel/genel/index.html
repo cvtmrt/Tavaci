@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tavacı Mehmet · Yönetim Paneli</title>
+  <style>
+    :root { --marka:#c1272d; --marka-koyu:#9e1d22; --altin:#e6a02c; --koyu:#1f1b16; --krem:#fbf6ee; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, sans-serif; background:var(--krem); color:var(--koyu); }
+    button { cursor:pointer; font-family:inherit; }
+    input, textarea, select { font-family:inherit; font-size:14px; width:100%; padding:9px 12px; border:1px solid #ddd; border-radius:8px; background:#fff; }
+    label { display:block; font-size:13px; font-weight:600; margin:10px 0 4px; }
+    .btn { background:var(--marka); color:#fff; border:none; padding:10px 18px; border-radius:999px; font-weight:600; }
+    .btn:hover { background:var(--marka-koyu); }
+    .btn-ikincil { background:#fff; color:var(--koyu); border:1px solid #ddd; }
+    .btn-sil { background:#fff; color:#c0392b; border:1px solid #f0c0c0; padding:6px 12px; border-radius:8px; font-size:13px; }
+    .kart { background:#fff; border:1px solid #eee; border-radius:14px; padding:16px; }
+
+    /* Giriş */
+    #giris { min-height:100vh; display:flex; align-items:center; justify-content:center; }
+    #giris .kutu { width:340px; text-align:center; }
+    #giris h1 { color:var(--marka); }
+
+    /* Panel */
+    header.ust { background:var(--marka); color:#fff; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+    header.ust h1 { font-size:18px; margin:0; }
+    header.ust .sag { display:flex; gap:10px; }
+    .sekmeler { display:flex; gap:6px; padding:14px 20px 0; flex-wrap:wrap; }
+    .sekme { background:#fff; border:1px solid #e3e3e3; padding:9px 16px; border-radius:999px; font-weight:600; font-size:14px; }
+    .sekme.aktif { background:var(--altin); border-color:var(--altin); color:#fff; }
+    main { padding:20px; max-width:1000px; margin:0 auto; }
+    .satir { display:flex; align-items:center; gap:14px; background:#fff; border:1px solid #eee; border-radius:12px; padding:10px 14px; margin-bottom:8px; }
+    .satir img { width:54px; height:54px; object-fit:cover; border-radius:8px; background:#f0f0f0; flex-shrink:0; }
+    .satir .bilgi { flex:1; min-width:0; }
+    .satir .bilgi b { display:block; }
+    .satir .bilgi small { color:#888; }
+    .satir .islem { display:flex; gap:6px; }
+    .ikili { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .form-alt { display:flex; gap:10px; margin-top:16px; }
+    .gizli { display:none !important; }
+    .onizleme { width:90px; height:90px; object-fit:cover; border-radius:10px; border:1px solid #ddd; margin-top:6px; background:#f0f0f0; }
+    .bilgi-cubuk { padding:10px 16px; border-radius:10px; margin:0 20px; font-size:14px; }
+    .bilgi-cubuk.ok { background:#e6f6e9; color:#1d7a34; }
+    .bilgi-cubuk.hata { background:#fdecec; color:#c0392b; }
+    h2 { margin-top:0; }
+    .baslik-satir { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+
+    /* Canlı önizleme (yan yana görünüm) */
+    .govde { display:flex; align-items:flex-start; }
+    .govde > main { flex:1; min-width:0; }
+    #onizlemeBolum { width:46%; position:sticky; top:0; height:100vh; border-left:1px solid #e3e3e3; background:#fff; display:flex; flex-direction:column; }
+    #onizlemeBolum.gizli { display:none; }
+    .onizleme-ust { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid #eee; background:#faf7f1; }
+    .onizleme-ust select { width:auto; padding:6px 10px; }
+    .onizleme-ust b { font-size:13px; }
+    #onizlemeFrame { flex:1; width:100%; border:0; }
+    #onizlemeBtn.acik { background:var(--altin); color:#fff; }
+    @media (max-width:900px) { #onizlemeBolum { display:none !important; } }
+
+    /* Akordeon bölümler (Anasayfa editörü) - düzenli, açılır-kapanır */
+    .bolum { background:#fff; border:1px solid #eaeaea; border-radius:12px; margin-bottom:10px; overflow:hidden; }
+    .bolum > summary { list-style:none; cursor:pointer; padding:14px 16px; font-weight:700; font-size:15px; color:var(--marka); display:flex; align-items:center; justify-content:space-between; user-select:none; }
+    .bolum > summary::-webkit-details-marker { display:none; }
+    .bolum > summary::after { content:"▸"; color:#bbb; font-size:13px; transition:transform .2s; }
+    .bolum[open] > summary::after { transform:rotate(90deg); }
+    .bolum[open] > summary { border-bottom:1px solid #f1f1f1; background:#fcfaf6; }
+    .bolum-govde { padding:14px 16px; }
+    .bolum-govde > .kart { box-shadow:none; }
+  </style>
+</head>
+<body>
+  <!-- ================= GİRİŞ ================= -->
+  <div id="giris">
+    <div class="kutu">
+      <h1>🍳 Yönetim Paneli</h1>
+      <p style="color:#777">Devam etmek için şifreni gir</p>
+      <input type="password" id="sifre" placeholder="Şifre" onkeydown="if(event.key==='Enter')girisYap()" />
+      <div id="girisHata" style="color:#c0392b; font-size:13px; height:18px; margin-top:6px"></div>
+      <button class="btn" style="width:100%; margin-top:6px" onclick="girisYap()">Giriş Yap</button>
+    </div>
+  </div>
+
+  <!-- ================= PANEL ================= -->
+  <div id="panel" class="gizli">
+    <header class="ust">
+      <h1>🍳 Tavacı Mehmet · Yönetim</h1>
+      <div class="sag">
+        <span id="kayitDurum" style="align-self:center;font-size:13px;min-width:90px;text-align:right"></span>
+        <button class="btn btn-ikincil" onclick="geriAlAc()">↩️ Geri Al</button>
+        <button class="btn btn-ikincil" id="onizlemeBtn" onclick="onizlemeToggle()">👁 Önizleme</button>
+        <button class="btn" onclick="yayinla()" id="yayinlaBtn">🚀 Siteyi Yayınla</button>
+        <button class="btn btn-ikincil" onclick="cikis()">Çıkış</button>
+      </div>
+    </header>
+
+    <div id="mesaj" class="bilgi-cubuk gizli"></div>
+
+    <div class="sekmeler">
+      <button class="sekme aktif" data-sekme="anasayfa" onclick="sekmeSec('anasayfa')">🏠 Anasayfa</button>
+      <button class="sekme" data-sekme="urunler" onclick="sekmeSec('urunler')">🍗 Ürünler</button>
+      <button class="sekme" data-sekme="kategoriler" onclick="sekmeSec('kategoriler')">📂 Kategoriler</button>
+      <button class="sekme" data-sekme="subeler" onclick="sekmeSec('subeler')">📍 Şubeler</button>
+      <button class="sekme" data-sekme="metinler" onclick="sekmeSec('metinler')">📄 Sayfalar</button>
+      <button class="sekme" data-sekme="tasarim" onclick="sekmeSec('tasarim')">🎨 Tasarım</button>
+      <button class="sekme" data-sekme="ayarlar" onclick="sekmeSec('ayarlar')">⚙️ Ayarlar</button>
+    </div>
+
+    <div class="govde">
+      <main id="icerik"></main>
+
+      <!-- Canlı önizleme bölmesi (sağda) -->
+      <aside id="onizlemeBolum" class="gizli">
+        <div class="onizleme-ust">
+          <b>👁 Canlı Önizleme</b>
+          <select id="onizlemeSayfa" onchange="onizlemeYenile()">
+            <option value="/">Anasayfa</option>
+            <option value="/menu">Menü</option>
+            <option value="/subeler">Şubeler</option>
+            <option value="/hakkimizda">Hakkımızda</option>
+            <option value="/iletisim">İletişim</option>
+          </select>
+          <button class="btn-ikincil" style="padding:5px 10px;border-radius:8px;font-size:12px" onclick="onizlemeYenile()">↻ Yenile</button>
+        </div>
+        <iframe id="onizlemeFrame" title="Site önizlemesi"></iframe>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Geri Al penceresi -->
+  <div id="geriAlModal" class="gizli" style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding-top:80px">
+    <div class="kart" style="width:420px;max-height:70vh;overflow:auto">
+      <div class="baslik-satir"><h2 style="font-size:18px">↩️ Geri Al</h2><button class="btn-ikincil" style="padding:4px 10px;border-radius:8px" onclick="geriAlKapat()">✕</button></div>
+      <p style="color:#888;margin-top:-6px">Sitenin önceki bir hâline dön. Mevcut hâl de yedeklenir, yani bu işlem de geri alınabilir.</p>
+      <div id="geriAlListe"></div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

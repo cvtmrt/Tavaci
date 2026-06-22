@@ -1,0 +1,72 @@
+[
+  {
+    "id": "k1",
+    "ad": "Menüler",
+    "adEn": "Menus",
+    "ikon": "🍽️",
+    "sira": 10
+  },
+  {
+    "id": "k2",
+    "ad": "Tavada Beyaz Etler",
+    "adEn": "Fried White Meats",
+    "ikon": "🍗",
+    "sira": 20
+  },
+  {
+    "id": "k3",
+    "ad": "Tavada Beyaz Etler (1.5 Porsiyon)",
+    "adEn": "Pan Fried White Meats (1.5 Portions)",
+    "ikon": "🍗",
+    "sira": 30
+  },
+  {
+    "id": "k4",
+    "ad": "Makarnalar",
+    "adEn": "Pastas",
+    "ikon": "🍝",
+    "sira": 40
+  },
+  {
+    "id": "k5",
+    "ad": "Extralar",
+    "adEn": "Extras",
+    "ikon": "➕",
+    "sira": 50
+  },
+  {
+    "id": "k6",
+    "ad": "Tatlılar",
+    "adEn": "sweets",
+    "ikon": "🍰",
+    "sira": 60
+  },
+  {
+    "id": "k7",
+    "ad": "İçecekler",
+    "adEn": "drinks",
+    "ikon": "🥤",
+    "sira": 70
+  },
+  {
+    "id": "k8",
+    "ad": "Poşet",
+    "adEn": "Carrier bag",
+    "ikon": "🛍️",
+    "sira": 80
+  },
+  {
+    "id": "k9",
+    "ad": "Kovada Penne Tavuk",
+    "adEn": "Penne Chicken in a Bucket",
+    "ikon": "🍝",
+    "sira": 90
+  },
+  {
+    "id": "k10",
+    "ad": "Tavacı Sokak Lezzetleri",
+    "adEn": "Tavacı Street Foods",
+    "ikon": "🌯",
+    "sira": 100
+  }
+]

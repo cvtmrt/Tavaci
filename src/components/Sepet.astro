@@ -1,0 +1,183 @@
+---
+// ============================================================
+//  SEPET + WHATSAPP SİPARİŞ
+//  Müşteri ürünleri sepete ekler, bilgilerini girer; sipariş
+//  WhatsApp'tan restorana iletilir. Ödeme kapıda (nakit/kart).
+//  Sepet tarayıcıda (localStorage) tutulur; sunucu gerekmez.
+// ============================================================
+
+import { ayarlarGetir } from "../data/icerik.js";
+
+const ayarlar = await ayarlarGetir();
+const waNumara = (ayarlar.whatsapp || "").replace(/[^0-9]/g, "");
+---
+
+<!-- Sepet açma butonu (sol alt) -->
+<button
+  id="sepet-ac"
+  aria-label="Sepet"
+  class="fixed bottom-5 left-5 z-50 w-14 h-14 rounded-full bg-marka text-white text-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+>
+  🛒
+  <span class="sepet-rozet hidden absolute -top-1 -right-1 bg-altin text-koyu text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">0</span>
+</button>
+
+<!-- Sepet çekmecesi -->
+<div id="sepet-modal" class="hidden fixed inset-0 z-[60]" data-wa={waNumara}>
+  <div id="sepet-arkaplan" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+  <div class="absolute right-0 top-0 h-full w-full max-w-md bg-krem shadow-2xl flex flex-col">
+    <!-- Başlık -->
+    <div class="flex items-center justify-between px-5 py-4 bg-marka text-white">
+      <h3 class="font-baslik font-extrabold text-lg" data-i18n="cart.title">Sepetim</h3>
+      <button id="sepet-kapat" aria-label="Kapat" class="text-2xl">✕</button>
+    </div>
+
+    <!-- Ürün listesi -->
+    <ul id="sepet-liste" class="flex-1 overflow-y-auto p-4 space-y-3"></ul>
+    <p id="sepet-bos" class="flex-1 flex items-center justify-center text-center text-koyu/50 px-6" data-i18n="cart.empty">
+      Sepetin boş. Menüden ürün ekle.
+    </p>
+
+    <!-- Alt: toplam + bilgiler + sipariş -->
+    <div id="sepet-alt" class="hidden border-t border-black/10 bg-white p-5 space-y-3">
+      <div class="flex items-center justify-between font-bold text-lg">
+        <span data-i18n="cart.total">Toplam</span>
+        <span id="sepet-toplam" class="text-marka">₺0</span>
+      </div>
+      <input id="sepet-ad" placeholder="Ad Soyad" data-i18n-ph="cart.name" class="w-full rounded-lg border border-black/10 px-4 py-2.5 outline-none focus:border-marka" />
+      <input id="sepet-tel" placeholder="Telefon" data-i18n-ph="cart.phone" class="w-full rounded-lg border border-black/10 px-4 py-2.5 outline-none focus:border-marka" />
+      <input id="sepet-adres" placeholder="Adres" data-i18n-ph="cart.address" class="w-full rounded-lg border border-black/10 px-4 py-2.5 outline-none focus:border-marka" />
+      <input id="sepet-not" placeholder="Not (isteğe bağlı)" data-i18n-ph="cart.note" class="w-full rounded-lg border border-black/10 px-4 py-2.5 outline-none focus:border-marka" />
+      <button id="sepet-gonder" class="w-full bg-[#25D366] hover:brightness-105 text-white font-bold py-3 rounded-full transition">
+        <span data-i18n="cart.order">WhatsApp ile Sipariş Ver</span>
+      </button>
+      <button id="sepet-kart" class="w-full border-2 border-marka text-marka font-bold py-3 rounded-full hover:bg-marka hover:text-white transition">
+        💳 <span data-i18n="cart.cardPay">Kartla Online Öde</span>
+      </button>
+      <p class="text-xs text-center text-koyu/50" data-i18n="cart.payNote">Ödeme kapıda (nakit/kart). Siparişin WhatsApp'tan iletilir.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ----- Sepet durumu (localStorage) -----
+  const ANAHTAR = "tm_sepet";
+  const oku = () => { try { return JSON.parse(localStorage.getItem(ANAHTAR)) || []; } catch { return []; } };
+  const yaz = (s) => localStorage.setItem(ANAHTAR, JSON.stringify(s));
+  const fiyatSayi = (str) => Number(String(str || "").replace(/[^0-9]/g, "")) || 0;
+
+  // Ürünü sepete ekle (menüdeki butonlar bunu çağırır)
+  function sepeteEkle(ds) {
+    const ad = ds.ad, fiyat = ds.fiyat;
+    if (!ad) return;
+    const s = oku();
+    const v = s.find((x) => x.ad === ad);
+    if (v) v.adet++;
+    else s.push({ ad, fiyat, adet: 1 });
+    yaz(s);
+    sepetGuncelle();
+    sepetAc();
+  }
+  function sepetAdet(ad, delta) {
+    const s = oku();
+    const v = s.find((x) => x.ad === ad);
+    if (!v) return;
+    v.adet += delta;
+    const yeni = s.filter((x) => x.adet > 0);
+    yaz(yeni); sepetGuncelle();
+  }
+  function sepetSil(ad) { yaz(oku().filter((x) => x.ad !== ad)); sepetGuncelle(); }
+
+  const $ = (id) => document.getElementById(id);
+
+  function sepetGuncelle() {
+    const s = oku();
+    const adetTop = s.reduce((t, x) => t + x.adet, 0);
+    const tutar = s.reduce((t, x) => t + fiyatSayi(x.fiyat) * x.adet, 0);
+
+    // Tüm rozetler (alt buton + üst menü) senkron
+    document.querySelectorAll(".sepet-rozet").forEach((el) => {
+      el.textContent = String(adetTop);
+      el.classList.toggle("hidden", adetTop === 0);
+    });
+
+    // Liste / boş / alt
+    const liste = $("sepet-liste"), bos = $("sepet-bos"), alt = $("sepet-alt");
+    if (!liste) return;
+    if (s.length === 0) {
+      liste.innerHTML = ""; liste.classList.add("hidden");
+      bos?.classList.remove("hidden"); alt?.classList.add("hidden");
+    } else {
+      liste.classList.remove("hidden"); bos?.classList.add("hidden"); alt?.classList.remove("hidden");
+      liste.innerHTML = s.map((x) => `
+        <li class="bg-white rounded-xl p-3 flex items-center gap-3 border border-black/5">
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-koyu text-sm truncate">${x.ad}</div>
+            <div class="text-marka font-bold text-sm">${x.fiyat}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="sepetAdet('${x.ad.replace(/'/g, "\\'")}',-1)" class="w-7 h-7 rounded-full bg-koyu/10 font-bold">−</button>
+            <span class="w-5 text-center font-semibold">${x.adet}</span>
+            <button onclick="sepetAdet('${x.ad.replace(/'/g, "\\'")}',1)" class="w-7 h-7 rounded-full bg-marka text-white font-bold">+</button>
+          </div>
+          <button onclick="sepetSil('${x.ad.replace(/'/g, "\\'")}')" class="text-koyu/30 hover:text-marka ml-1">🗑</button>
+        </li>`).join("");
+    }
+    const top = $("sepet-toplam");
+    if (top) top.textContent = "₺" + tutar;
+  }
+
+  function sepetAc() { $("sepet-modal")?.classList.remove("hidden"); document.body.style.overflow = "hidden"; }
+  function sepetKapat() { $("sepet-modal")?.classList.add("hidden"); document.body.style.overflow = ""; }
+
+  // window'a aç (menü + header butonları erişsin)
+  (window as any).sepeteEkle = sepeteEkle;
+  (window as any).sepetAdet = sepetAdet;
+  (window as any).sepetSil = sepetSil;
+  (window as any).sepetAc = sepetAc;
+
+  // WhatsApp ile sipariş gönder
+  function siparisGonder() {
+    const s = oku();
+    if (!s.length) return;
+    const wa = $("sepet-modal")?.dataset.wa;
+    if (!wa) { alert("WhatsApp numarası tanımlı değil (panel > Ayarlar)."); return; }
+    const tutar = s.reduce((t, x) => t + fiyatSayi(x.fiyat) * x.adet, 0);
+    const satirlar = s.map((x) => `• ${x.adet}x ${x.ad} — ${x.fiyat}`).join("\n");
+    const ad = ($("sepet-ad") as HTMLInputElement)?.value || "";
+    const tel = ($("sepet-tel") as HTMLInputElement)?.value || "";
+    const adres = ($("sepet-adres") as HTMLInputElement)?.value || "";
+    const not = ($("sepet-not") as HTMLInputElement)?.value || "";
+    const metin =
+      `*Yeni Sipariş — Tavacı Mehmet*\n\n` +
+      `🍽️ Sipariş:\n${satirlar}\n\n` +
+      `💰 Toplam: ₺${tutar}\n\n` +
+      `👤 Ad: ${ad}\n📞 Telefon: ${tel}\n📍 Adres: ${adres}` +
+      (not ? `\n📝 Not: ${not}` : "");
+    window.open(`https://wa.me/${wa}?text=${encodeURIComponent(metin)}`, "_blank");
+  }
+
+  // Olaylar (header gibi persist edildiği için bir kez bağlanır)
+  document.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement;
+    if (t.closest("#sepet-ac")) sepetAc();
+    else if (t.closest("#sepet-kapat") || t.id === "sepet-arkaplan") sepetKapat();
+    else if (t.closest("#sepet-gonder")) siparisGonder();
+    else if (t.closest("#sepet-kart")) kartOde();
+  });
+
+  // Kartla online ödeme: gerçek kart tahsilatı için ödeme altyapısı
+  // (iyzico/PayTR) + işletme hesabı + canlı sunucu gerekir. Site yayına
+  // alınınca aktifleşir; şimdilik kullanıcıyı bilgilendiriyoruz.
+  function kartOde() {
+    if (!oku().length) return;
+    const dil = localStorage.getItem("dil") || "tr";
+    alert(dil === "en"
+      ? "Online card payment becomes active once the site is live and the payment account (iyzico/PayTR) is set up. For now you can order via WhatsApp (pay at the door)."
+      : "Kartla online ödeme, site yayına alınıp ödeme hesabı (iyzico/PayTR) kurulunca aktif olacak. Şimdilik WhatsApp ile sipariş verip kapıda ödeyebilirsin.");
+  }
+
+  sepetGuncelle();
+  // Sayfa geçişlerinde rozet güncel kalsın
+  document.addEventListener("astro:page-load", sepetGuncelle);
+</script>

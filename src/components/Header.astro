@@ -1,0 +1,150 @@
+---
+// ============================================================
+//  ÜST MENÜ (HEADER) - İKİ KATLI TASARIM
+//  Üst şerit (marka renginde): solda arama, sağda dil seçici.
+//  Ana bar (altın renginde): logo + menü + telefon/sipariş bloğu.
+//  Mobilde menü, alttaki küçük JS ile açılıp kapanır.
+// ============================================================
+
+import Arama from "./Arama.astro";
+import DilSecici from "./DilSecici.astro";
+import { ayarlarGetir } from "../data/icerik.js";
+
+// İletişim/sipariş bilgileri panelden gelir
+const ayarlar = await ayarlarGetir();
+// Sipariş linki boşsa İletişim sayfasına gider
+const siparisYol = ayarlar.siparisLinki || "/iletisim";
+// Telefonu tel: bağlantısı için sadeleştir
+const telefonLink = (ayarlar.telefon || "").replace(/[^0-9+]/g, "");
+
+// Menü bağlantıları - tek yerden yönetmek için dizi halinde
+// i18n = çeviri sözlüğündeki anahtar (dil değişince metin buradan gelir)
+const baglantilar = [
+  { ad: "Anasayfa", yol: "/", i18n: "nav.home" },
+  { ad: "Menü", yol: "/menu", i18n: "nav.menu" },
+  { ad: "Şubeler", yol: "/subeler", i18n: "nav.branches" },
+  { ad: "Hakkımızda", yol: "/hakkimizda", i18n: "nav.about" },
+  { ad: "İletişim", yol: "/iletisim", i18n: "nav.contact" },
+];
+
+// Aktif sayfayı vurgulamak için mevcut yolu al
+const aktifYol = Astro.url.pathname;
+---
+
+<header transition:persist class="sticky top-0 z-50 shadow-md">
+  <!-- ================= ÜST ŞERİT (marka renginde) ================= -->
+  <div class="bg-marka text-white">
+    <div class="flex items-center justify-between h-12 px-4 md:px-6">
+      <!-- Solda: arama -->
+      <Arama />
+      <!-- Sağda: sepet + dil seçici -->
+      <div class="flex items-center gap-4">
+        <button onclick="sepetAc()" aria-label="Sepetim" class="relative text-lg text-white hover:text-altin transition-colors">
+          🛒
+          <span class="sepet-rozet hidden absolute -top-2 -right-2 bg-altin text-koyu text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+        </button>
+        <DilSecici />
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ANA BAR (altın renginde) ================= -->
+  <div class="bg-altin">
+    <div class="flex items-stretch h-16">
+      <!-- Sol: logo + masaüstü menü -->
+      <div class="flex items-center gap-8 px-4 md:px-8 flex-1 min-w-0">
+        <!-- Logo (anasayfaya gider) - yuvarlak beyaz zemin üzerinde -->
+        <a href="/" class="flex items-center shrink-0" aria-label="Tavacı Mehmet Efendi - Anasayfa">
+          <span class="bg-white rounded-full p-2 shadow-md ring-2 ring-marka/10 flex items-center justify-center">
+            <img
+              src="/logo.png"
+              alt="Tavacı Mehmet Efendi"
+              class="h-11 w-11 object-contain block"
+            />
+          </span>
+        </a>
+
+        <!-- Masaüstü menü -->
+        <ul class="hidden md:flex items-center gap-7 font-baslik font-semibold text-sm uppercase tracking-wide">
+          {
+            baglantilar.map((b) => (
+              <li>
+                <a
+                  href={b.yol}
+                  data-i18n={b.i18n}
+                  class={`relative py-1 transition-colors hover:text-marka-koyu after:absolute after:left-0 after:-bottom-0.5 after:h-0.5 after:bg-marka-koyu after:transition-all hover:after:w-full ${
+                    aktifYol === b.yol ? "text-marka-koyu after:w-full" : "text-marka after:w-0"
+                  }`}
+                >
+                  {b.ad}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <!-- Sağ: telefon bloğu + sipariş bloğu (kenara yapışık, tam yükseklik) -->
+      <!-- Telefon bloğu (koyu kırmızı) -->
+      <a
+        href={`tel:${telefonLink}`}
+        class="hidden md:flex items-center gap-2 bg-marka-koyu px-6 text-altin font-baslik font-extrabold text-lg hover:brightness-110 transition"
+      >
+        <span class="text-xl">📞</span>
+        {ayarlar.telefon}
+      </a>
+
+      <!-- Sipariş bloğu (marka kırmızı) -->
+      <a
+        href={siparisYol}
+        class="hidden md:flex flex-col justify-center bg-marka hover:bg-marka-koyu px-7 text-white text-center transition-colors leading-tight"
+      >
+        <span class="font-baslik font-extrabold text-lg uppercase" data-i18n="nav.order">Sipariş Ver</span>
+        <span class="text-xs text-white/80" data-i18n="order.sub">Online Sipariş</span>
+      </a>
+
+      <!-- Mobil menü aç/kapa butonu -->
+      <button
+        id="mobil-menu-btn"
+        class="md:hidden px-5 text-2xl text-marka"
+        aria-label="Menüyü aç"
+      >
+        ☰
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobil açılır menü (varsayılan gizli) -->
+  <ul id="mobil-menu" class="hidden md:hidden flex-col gap-1 px-4 py-3 bg-altin border-t border-marka/20">
+    {
+      baglantilar.map((b) => (
+        <li>
+          <a
+            href={b.yol}
+            data-i18n={b.i18n}
+            class="block py-2 font-semibold text-marka hover:text-marka-koyu"
+          >
+            {b.ad}
+          </a>
+        </li>
+      ))
+    }
+    <!-- Mobilde sipariş bağlantısı -->
+    <li class="pt-2 border-t border-marka/20 mt-1">
+      <a href={siparisYol} data-i18n="nav.order" class="block py-2 font-extrabold text-marka-koyu uppercase">
+        Sipariş Ver
+      </a>
+    </li>
+  </ul>
+</header>
+
+<script>
+  // Mobil menüyü açıp kapatan küçük betik (header persist edildiği için
+  // bir kez bağlanır ve sayfa geçişlerinde de çalışır)
+  const btn = document.getElementById("mobil-menu-btn");
+  const menu = document.getElementById("mobil-menu");
+  btn?.addEventListener("click", () => {
+    // "hidden" sınıfını ekle/çıkar -> menü görünür/gizli olur
+    menu?.classList.toggle("hidden");
+  });
+</script>

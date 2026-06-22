@@ -1,0 +1,109 @@
+---
+// ============================================================
+//  ANASAYFA
+//  Hero (giriş) bölümü, öne çıkan ürünler, hakkımızda özeti
+//  ve çağrı (CTA) bölümünden oluşur.
+// ============================================================
+
+import Layout from "../layouts/Layout.astro";
+import Hero from "../components/Hero.astro";
+import BolumlerNav from "../components/BolumlerNav.astro";
+import { ayarlarGetir, anasayfaGetir, menuGetir } from "../data/icerik.js";
+
+// Instagram adresi + anasayfa bölüm görünürlüğü panelden gelir
+const ayarlar = await ayarlarGetir();
+const { bolumler, hikaye, cta } = await anasayfaGetir();
+
+// Instagram bölümü için menüden 6 gerçek yemek fotoğrafı seç
+const menu = await menuGetir();
+const igFotolar = menu
+  .flatMap((k) => k.urunler)
+  .map((u) => u.gorsel)
+  .filter(Boolean)
+  .slice(0, 6);
+
+// "Sipariş Ver" hedefi: panelde sipariş linki varsa oraya (Yemeksepeti vb.),
+// yoksa CTA linkine. Dış linkse yeni sekmede açılsın.
+const siparisHedef = ayarlar.siparisLinki || cta.link || "/iletisim";
+const siparisDis = siparisHedef.startsWith("http");
+---
+
+<Layout baslik="Tavacı Mehmet | Közde Pişen Tavalar" aciklama="Geleneksel tava lezzetleri, közün dumanıyla buluşuyor.">
+  <!-- ===================== HERO SLIDER ===================== -->
+  {bolumler.hero && <Hero />}
+
+  <!-- ===== BÖLÜM YÖNLENDİRME PANELLERİ (her sekmeye animasyonlu kart) ===== -->
+  {bolumler.kesfet && <BolumlerNav />}
+
+  <!-- ===================== HAKKIMIZDA ÖZETİ ===================== -->
+  {bolumler.hikaye && (
+  <section class="bg-white py-16 overflow-hidden">
+    <div class="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-10 items-center">
+      <div class="text-7xl text-center" data-aos="zoom-in">{hikaye.emoji}</div>
+      <div data-aos="fade-left">
+        <h2 class="font-baslik font-extrabold text-3xl text-koyu" data-i18n="home.story.title">Hikayemiz</h2>
+        <p class="mt-4 text-koyu/70 leading-relaxed" data-i18n="home.story.text">
+          Tavacı Mehmet, küçük bir mahalle lokantası olarak 1998'de yola çıktı.
+          Bugün dört şehirde, aynı geleneksel köz lezzetini binlerce misafirimizle
+          paylaşıyoruz. Sırrımız basit: taze malzeme, gerçek köz ateşi ve sabır.
+        </p>
+        <a href={hikaye.link} class="inline-block mt-6 text-marka font-semibold hover:underline" data-i18n="home.story.more">
+          Daha fazlasını oku →
+        </a>
+      </div>
+    </div>
+  </section>
+  )}
+
+  <!-- ===================== INSTAGRAM ===================== -->
+  {bolumler.instagram && (
+  <section class="max-w-6xl mx-auto px-4 py-16">
+    <div class="text-center mb-10" data-aos="fade-up">
+      <h2 class="font-baslik font-extrabold text-3xl md:text-4xl text-koyu" data-i18n="home.ig.title">Bizi Takip Et</h2>
+      <a
+        href={ayarlar.instagram}
+        target="_blank"
+        rel="noopener"
+        class="mt-2 inline-block text-marka font-semibold hover:underline"
+      >
+        @tavacimehmetefendiii
+      </a>
+    </div>
+
+    <!-- Gerçek yemek fotoğraflarından gönderi ızgarası -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+      {
+        igFotolar.map((foto, i) => (
+          <a
+            href={ayarlar.instagram}
+            target="_blank"
+            rel="noopener"
+            class="group relative aspect-square rounded-xl overflow-hidden bg-koyu/5"
+            data-aos="zoom-in"
+            data-aos-delay={i * 80}
+          >
+            <img src={foto} alt="Tavacı Mehmet" loading="lazy" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+            <!-- Hover'da Instagram simgesi belirir -->
+            <span class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-2xl">
+              📷
+            </span>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+  )}
+
+  <!-- ===================== ÇAĞRI (CTA) ===================== -->
+  {bolumler.cta && (
+  <section class="max-w-6xl mx-auto px-4 py-16">
+    <div class="bg-marka rounded-3xl px-8 py-12 text-center text-white" data-aos="zoom-in">
+      <h2 class="font-baslik font-extrabold text-3xl" data-i18n="home.cta.title">Bugün canınız köz mü çekti?</h2>
+      <p class="mt-3 text-white/80" data-i18n="home.cta.sub">Hemen sipariş verin, sıcak sıcak kapınızda.</p>
+      <a href={siparisHedef} target={siparisDis ? "_blank" : undefined} rel={siparisDis ? "noopener" : undefined} class="inline-block mt-7 bg-white text-marka font-bold px-8 py-3.5 rounded-full hover:bg-krem transition-colors" data-i18n="home.cta.btn">
+        Sipariş Ver
+      </a>
+    </div>
+  </section>
+  )}
+</Layout>
