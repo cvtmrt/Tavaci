@@ -148,4 +148,16 @@ const aktifYol = Astro.url.pathname;
     // "hidden" sınıfını ekle/çıkar -> menü görünür/gizli olur
     menu?.classList.toggle("hidden");
   });
+
+  // Menüden bir bağlantıya tıklanınca menüyü kapat (mobilde kullanıcı
+  // başka sayfaya geçerken menünün açık kalmaması için)
+  menu?.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => menu.classList.add("hidden"));
+  });
+
+  // View Transitions ile sayfa geçişinde header persist edildiği için
+  // menü açık kalabilir; her geçişten önce kapat
+  document.addEventListener("astro:before-swap", () => {
+    menu?.classList.add("hidden");
+  });
 </script>
