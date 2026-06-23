@@ -334,21 +334,10 @@ function ayarlarCiz() {
       <label>WhatsApp numarası (ülke koduyla, sadece rakam)</label><input id="a_whatsapp" placeholder="905xxxxxxxxx" />
       <p style="color:#888;font-size:13px;margin-top:4px">WhatsApp numarası girilince sitede yüzen WhatsApp butonu ve form WhatsApp'a gider.</p>
       <div class="form-alt"><button class="btn" onclick="ayarlarKaydet()">Kaydet</button></div>
-    </div>
-
-    <div class="kart" style="max-width:560px;margin-top:16px">
-      <h2 style="font-size:17px">🧹 Bakım</h2>
-      <p style="color:#888;margin-top:-6px">Sildiğin/değiştirdiğin görseller diskte kalır. Bunları temizleyip yer açabilirsin.</p>
-      <button class="btn btn-ikincil" onclick="gorselTemizle()">Kullanılmayan görselleri temizle</button>
     </div>`;
   $("a_telefon").value = a.telefon || ""; $("a_eposta").value = a.eposta || "";
   $("a_instagram").value = a.instagram || ""; $("a_siparisLinki").value = a.siparisLinki || "";
   $("a_whatsapp").value = a.whatsapp || "";
-}
-async function gorselTemizle() {
-  if (!confirm("Kullanılmayan (hiçbir yerde görünmeyen) görseller silinecek. Devam edilsin mi?")) return;
-  const j = await (await fetch("/api/gorsel-temizle", { method: "POST" })).json();
-  mesajGoster("ok", `${j.silinen || 0} kullanılmayan görsel temizlendi.`);
 }
 async function ayarlarKaydet() {
   const a = { telefon: $("a_telefon").value.trim(), eposta: $("a_eposta").value.trim(), instagram: $("a_instagram").value.trim(), siparisLinki: $("a_siparisLinki").value.trim(), whatsapp: $("a_whatsapp").value.replace(/[^0-9]/g, "") };

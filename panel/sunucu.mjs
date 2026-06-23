@@ -390,29 +390,6 @@ app.post("/api/cevir", girisGerek, async (req, res) => {
 });
 
 // ============================================================
-//  KULLANILMAYAN GÖRSELLERİ TEMİZLE — DB'deki referansları tara
-// ============================================================
-app.post("/api/gorsel-temizle", girisGerek, async (req, res) => {
-  try {
-    const referanslar = new Set();
-    const ekle = (metin) => {
-      for (const r of String(metin || "").match(/\/yuklenenler\/[A-Za-z0-9._-]+/g) || []) {
-        referanslar.add(r.replace("/yuklenenler/", ""));
-      }
-    };
-    for (const r of await sorgu("SELECT gorsel FROM urunler")) ekle(r.gorsel);
-    for (const r of await sorgu("SELECT gorsel FROM hero_slaytlar")) ekle(r.gorsel);
-    for (const r of await sorgu("SELECT deger FROM anasayfa_ayar")) ekle(r.deger);
-
-    let silinen = 0;
-    for (const dosya of readdirSync(YUKLEME)) {
-      if (!referanslar.has(dosya)) { rmSync(join(YUKLEME, dosya), { force: true }); silinen++; }
-    }
-    res.json({ ok: true, silinen });
-  } catch (e) { res.status(500).json({ hata: e.message }); }
-});
-
-// ============================================================
 //  YEDEK LİSTESİ / GERİ AL
 // ============================================================
 app.get("/api/yedekler", girisGerek, (req, res) => {
