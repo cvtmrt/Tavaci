@@ -453,11 +453,6 @@ app.post("/api/geri-al", girisGerek, async (req, res) => {
   } catch (e) { res.status(500).json({ hata: e.message }); }
 });
 
-// --- SİTEYİ YAYINLA — SSR olduğu için içerik anında canlı; no-op ---
-app.post("/api/yayinla", girisGerek, (req, res) => {
-  res.json({ ok: true, mesaj: "Değişiklikler anında yayında (SSR)." });
-});
-
 // ============================================================
 //  STATİK DOSYALAR + PANEL + ASTRO SSR
 //  Sıra önemli: önce çalışma-zamanı dosyaları & panel, en son site.

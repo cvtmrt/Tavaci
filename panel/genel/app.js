@@ -624,7 +624,7 @@ async function asCevir(i, trAlan, enAlan) {
 
 async function anasayfaKaydet() {
   await anasayfaKaydetSessiz(); // hem yapı (anasayfa.json) hem yazılar (metinler.json)
-  mesajGoster("ok", "Anasayfa kaydedildi · 'Siteyi Yayınla' ile yayına al"); await yukle();
+  mesajGoster("ok", "Anasayfa kaydedildi · anında yayında"); await yukle();
   aktifSekme = "anasayfa"; sekmeSec("anasayfa");
 }
 
@@ -719,7 +719,7 @@ async function hkDegerCevir(i, tr, en, enId) {
 
 async function metinlerKaydet() {
   await metinlerKaydetSessiz();
-  mesajGoster("ok", "Sayfalar kaydedildi · 'Siteyi Yayınla' ile yayına al");
+  mesajGoster("ok", "Sayfalar kaydedildi · anında yayında");
   await yukle(); aktifSekme = "metinler"; sekmeSec("metinler");
 }
 
@@ -813,7 +813,7 @@ async function temaKaydet() {
   const t = {};
   for (const id of ["marka", "markaKoyu", "altin", "koyu", "krem"]) t[id] = $(id).value;
   await fetch("/api/tema", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(t) });
-  mesajGoster("ok", "Renkler kaydedildi · 'Siteyi Yayınla' ile yayına al"); await yukle();
+  mesajGoster("ok", "Renkler kaydedildi · anında yayında"); await yukle();
 }
 
 async function logoYukle(input) {
@@ -822,7 +822,7 @@ async function logoYukle(input) {
   mesajGoster("ok", "Logo yükleniyor…");
   const r = await fetch("/api/logo", { method: "POST", body: fd });
   const j = await r.json();
-  if (j.ok) { $("logoOnizle").src = j.yol; $("logoOnizle").style.visibility = "visible"; mesajGoster("ok", "Logo güncellendi · 'Siteyi Yayınla' ile yayına al"); }
+  if (j.ok) { $("logoOnizle").src = j.yol; $("logoOnizle").style.visibility = "visible"; mesajGoster("ok", "Logo güncellendi · anında yayında"); }
   else mesajGoster("hata", "Logo yüklenemedi");
 }
 
@@ -831,19 +831,6 @@ async function sil(tur, id) {
   if (!confirm("Silmek istediğine emin misin?")) return;
   await fetch(`/api/${tur}/${id}`, { method: "DELETE" });
   mesajGoster("ok", "Silindi"); await yukle(); ciz();
-}
-
-async function yayinla() {
-  const btn = $("yayinlaBtn");
-  btn.disabled = true; btn.textContent = "⏳ Yayınlanıyor…";
-  mesajGoster("ok", "Site yeniden derleniyor, lütfen bekle (1-2 dk)…");
-  try {
-    const r = await fetch("/api/yayinla", { method: "POST" });
-    const j = await r.json();
-    if (j.ok) mesajGoster("ok", "✅ Site güncellendi!");
-    else mesajGoster("hata", "Yayınlama hatası: " + (j.hata || "").slice(0, 120));
-  } catch { mesajGoster("hata", "Yayınlama sırasında hata oluştu"); }
-  btn.disabled = false; btn.textContent = "🚀 Siteyi Yayınla";
 }
 
 // ================= CANLI ÖNİZLEME =================
