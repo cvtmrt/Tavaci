@@ -394,6 +394,7 @@ function asHazirla() {
   AS.panelGorseller = AS.panelGorseller || { 1: "", 2: "", 3: "", 4: "" };
   AS.panelLinkler = Object.assign({ 1: "/menu", 2: "/subeler", 3: "/hakkimizda", 4: "/iletisim" }, AS.panelLinkler || {});
   AS.hikaye = Object.assign({ emoji: "👨‍🍳", link: "/hakkimizda" }, AS.hikaye || {});
+  AS.instagram = Object.assign({ gorsel: "" }, AS.instagram || {});
   AS.cta = Object.assign({ link: "/iletisim" }, AS.cta || {});
   AS.animasyon = Object.assign({ heroEfekt: "fade", heroSure: 4.5, heroOtomatik: true, scrollAcik: true, scrollSure: 700 }, AS.animasyon || {});
 }
@@ -565,6 +566,11 @@ function anasayfaCiz() {
 
     ${bolum("instagram", "📷 Instagram", `
       ${htAlan("home.ig.title", "Başlık")}
+      <label>Görsel (ortada tek görsel — tıklayınca Instagram'a gider)</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="file" accept="image/*" onchange="asInstagramGorsel(this)" />
+        ${AS.instagram.gorsel ? `<img src="${esc(AS.instagram.gorsel)}" class="onizleme" style="margin:0;width:64px;height:64px" /><button class="btn-sil" onclick="asInstagramGorselSil()">Kaldır</button>` : `<small style="color:#999">Görsel yok</small>`}
+      </div>
       <p style="color:#888;margin-top:4px">Instagram adresini "⚙️ Ayarlar" sekmesinden değiştirebilirsin.</p>
     `)}
 
@@ -635,6 +641,17 @@ async function asPanelGorsel(n, input) {
   else mesajGoster("hata", "Yüklenemedi");
 }
 async function asPanelGorselSil(n) { AS.panelGorseller[n] = ""; anasayfaCiz(); await asKaydetOnizle(); }
+
+// Instagram bölümü tek görseli
+async function asInstagramGorsel(input) {
+  const f = input.files[0]; if (!f) return;
+  const fd = new FormData(); fd.append("dosya", f);
+  mesajGoster("ok", "Görsel yükleniyor…");
+  const r = await fetch("/api/gorsel", { method: "POST", body: fd }); const j = await r.json();
+  if (j.yol) { AS.instagram.gorsel = j.yol; anasayfaCiz(); await asKaydetOnizle(); mesajGoster("ok", "Görsel eklendi"); }
+  else mesajGoster("hata", "Yüklenemedi");
+}
+async function asInstagramGorselSil() { AS.instagram.gorsel = ""; anasayfaCiz(); await asKaydetOnizle(); }
 
 // Slayt alanı otomatik çeviri (TR -> EN, EN boşsa)
 async function asCevir(i, trAlan, enAlan) {

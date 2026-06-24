@@ -8,19 +8,11 @@
 import Layout from "../layouts/Layout.astro";
 import Hero from "../components/Hero.astro";
 import BolumlerNav from "../components/BolumlerNav.astro";
-import { ayarlarGetir, anasayfaGetir, menuGetir } from "../data/icerik.js";
+import { ayarlarGetir, anasayfaGetir } from "../data/icerik.js";
 
 // Instagram adresi + anasayfa bölüm görünürlüğü panelden gelir
 const ayarlar = await ayarlarGetir();
-const { bolumler, hikaye, cta } = await anasayfaGetir();
-
-// Instagram bölümü için menüden 6 gerçek yemek fotoğrafı seç
-const menu = await menuGetir();
-const igFotolar = menu
-  .flatMap((k) => k.urunler)
-  .map((u) => u.gorsel)
-  .filter(Boolean)
-  .slice(0, 6);
+const { bolumler, hikaye, cta, instagram } = await anasayfaGetir();
 
 // "Sipariş Ver" hedefi: panelde sipariş linki varsa oraya (Yemeksepeti vb.),
 // yoksa CTA linkine. Dış linkse yeni sekmede açılsın.
@@ -75,27 +67,24 @@ const igEtiket = igKullanici ? "@" + igKullanici.replace(/^@/, "") : "";
       </a>
     </div>
 
-    <!-- Gerçek yemek fotoğraflarından gönderi ızgarası -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-      {
-        igFotolar.map((foto, i) => (
-          <a
-            href={ayarlar.instagram}
-            target="_blank"
-            rel="noopener"
-            class="group relative aspect-square rounded-xl overflow-hidden bg-koyu/5"
-            data-aos="zoom-in"
-            data-aos-delay={i * 80}
-          >
-            <img src={foto} alt="Tavacı Mehmet" loading="lazy" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-            <!-- Hover'da Instagram simgesi belirir -->
-            <span class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-2xl">
-              📷
-            </span>
-          </a>
-        ))
-      }
-    </div>
+    <!-- Ortada tek görsel (panelden yüklenir) — tıklayınca Instagram'a gider.
+         Görsel yoksa hiç gösterilmez (kırık kare çıkmaz). -->
+    {instagram.gorsel && (
+      <a
+        href={ayarlar.instagram}
+        target="_blank"
+        rel="noopener"
+        class="group block max-w-md mx-auto"
+        data-aos="zoom-in"
+      >
+        <div class="relative aspect-square rounded-2xl overflow-hidden bg-koyu/5 shadow-sm">
+          <img src={instagram.gorsel} alt="Tavacı Mehmet Instagram" loading="lazy" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          <span class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center text-4xl opacity-0 group-hover:opacity-100">
+            📷
+          </span>
+        </div>
+      </a>
+    )}
   </section>
   )}
 
