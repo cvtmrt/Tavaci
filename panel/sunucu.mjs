@@ -26,8 +26,13 @@ import { ayarlariDuzlestir, anasayfaTopla, HERO_ALANLAR } from "../lib/anasayfa.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const KOK = join(__dirname, "..");
-// Kalıcı veri dizini: Railway'de Volume mount yolu (VERI_DIZIN), yerelde repo içinde .veri-kalici
-const VERI = process.env.VERI_DIZIN || join(KOK, ".veri-kalici");
+// Kalıcı veri dizini (yüklenen foto/logo/yedek burada durur). Öncelik:
+//   1) VERI_DIZIN          — elle ayarlanırsa (ör. /data)
+//   2) RAILWAY_VOLUME_MOUNT_PATH — Railway, Volume bağlıysa otomatik verir
+//   3) .veri-kalici        — yerel geliştirme (repo içi)
+// Böylece Volume bağlıyken VERI_DIZIN unutulsa bile fotoğraflar Volume'e
+// yazılır ve redeploy'larda KAYBOLMAZ.
+const VERI = process.env.VERI_DIZIN || process.env.RAILWAY_VOLUME_MOUNT_PATH || join(KOK, ".veri-kalici");
 const YUKLEME = join(VERI, "yuklenenler"); // yüklenen fotoğraflar
 const YEDEK = join(VERI, "yedekler");      // DB anlık görüntüleri
 const LOGO = join(VERI, "logo.png");       // panelden yüklenen logo
@@ -36,6 +41,8 @@ const DIST_CLIENT = join(KOK, "dist", "client");
 
 mkdirSync(YUKLEME, { recursive: true });
 mkdirSync(YEDEK, { recursive: true });
+// Hangi dizine yazıldığını logda göster (Volume doğrulaması için)
+console.log("Veri dizini (yüklenenler/yedekler):", VERI);
 
 const PORT = process.env.PORT || process.env.PANEL_PORT || 5174;
 

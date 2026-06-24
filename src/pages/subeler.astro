@@ -32,13 +32,6 @@ const subeler = await subeleriGetir();
             data-aos="fade-up"
             data-aos-delay={(i % 3) * 100}
           >
-            <!-- Gömülü harita (anahtar gerektirmez) -->
-            <iframe
-              src={`https://maps.google.com/maps?q=${sorgu}&z=15&output=embed`}
-              class="w-full h-40 border-0"
-              loading="lazy"
-              title={`${sube.sehir} ${sube.semt} harita`}
-            />
             <div class="p-6 flex flex-col flex-1">
               <div class="flex items-center gap-2 text-marka font-semibold">
                 📍 {sube.sehir} - {sube.semt}
