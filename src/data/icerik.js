@@ -22,7 +22,7 @@ export async function menuGetir() {
   try {
     const kategoriler = await sorgu("SELECT id, ad, ad_en, ikon, sira FROM kategoriler ORDER BY sira ASC");
     const urunler = await sorgu(
-      "SELECT id, ad, ad_en, aciklama, aciklama_en, fiyat, kategori_id, sira, gorsel FROM urunler ORDER BY sira ASC"
+      "SELECT id, ad, ad_en, aciklama, aciklama_en, fiyat, kategori_id, sira, gorsel, alerjenler, icindekiler, kalori, protein, karbonhidrat, yag FROM urunler ORDER BY sira ASC"
     );
     if (kategoriler.length) {
       return kategoriler.map((kat) => {
@@ -41,6 +41,12 @@ export async function menuGetir() {
               aciklamaEn: u.aciklama_en || "",
               fiyat: u.fiyat || "",
               gorsel: u.gorsel || "",
+              alerjenler: u.alerjenler || "",
+              icindekiler: u.icindekiler || "",
+              kalori: u.kalori || "",
+              protein: u.protein || "",
+              karbonhidrat: u.karbonhidrat || "",
+              yag: u.yag || "",
               slug: s,
               katSlug: kSlug,
             };

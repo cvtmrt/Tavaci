@@ -26,9 +26,23 @@ CREATE TABLE IF NOT EXISTS urunler (
   fiyat        VARCHAR(64)   NOT NULL DEFAULT '',
   kategori_id  VARCHAR(64)   REFERENCES kategoriler (id) ON DELETE CASCADE ON UPDATE CASCADE,
   sira         INTEGER       NOT NULL DEFAULT 0,
-  gorsel       VARCHAR(1024) NOT NULL DEFAULT ''
+  gorsel       VARCHAR(1024) NOT NULL DEFAULT '',
+  alerjenler   TEXT,                            -- virgülle ayrık (ör. "Gluten, Süt")
+  icindekiler  TEXT,                            -- "İçinde Neler Var?" metni
+  kalori       VARCHAR(64)   NOT NULL DEFAULT '',
+  protein      VARCHAR(64)   NOT NULL DEFAULT '',
+  karbonhidrat VARCHAR(64)   NOT NULL DEFAULT '',
+  yag          VARCHAR(64)   NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_urun_kategori ON urunler (kategori_id);
+
+-- Mevcut (eski) veritabanları için: kolonlar yoksa eklenir (veri korunur).
+ALTER TABLE urunler ADD COLUMN IF NOT EXISTS alerjenler   TEXT;
+ALTER TABLE urunler ADD COLUMN IF NOT EXISTS icindekiler  TEXT;
+ALTER TABLE urunler ADD COLUMN IF NOT EXISTS kalori       VARCHAR(64) NOT NULL DEFAULT '';
+ALTER TABLE urunler ADD COLUMN IF NOT EXISTS protein      VARCHAR(64) NOT NULL DEFAULT '';
+ALTER TABLE urunler ADD COLUMN IF NOT EXISTS karbonhidrat VARCHAR(64) NOT NULL DEFAULT '';
+ALTER TABLE urunler ADD COLUMN IF NOT EXISTS yag          VARCHAR(64) NOT NULL DEFAULT '';
 
 -- --- ŞUBELER ---
 CREATE TABLE IF NOT EXISTS subeler (

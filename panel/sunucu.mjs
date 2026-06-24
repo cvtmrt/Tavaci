@@ -151,8 +151,9 @@ app.get("/api/veri", girisGerek, async (req, res) => {
   try {
     const kategoriler = (await sorgu("SELECT id, ad, ad_en, ikon, sira FROM kategoriler ORDER BY sira ASC"))
       .map((k) => ({ id: k.id, ad: k.ad, adEn: k.ad_en, ikon: k.ikon, sira: k.sira }));
-    const urunler = (await sorgu("SELECT id, ad, ad_en, aciklama, aciklama_en, fiyat, kategori_id, sira, gorsel FROM urunler ORDER BY sira ASC"))
-      .map((u) => ({ id: u.id, ad: u.ad, adEn: u.ad_en, aciklama: u.aciklama, aciklamaEn: u.aciklama_en, fiyat: u.fiyat, kategoriId: u.kategori_id, sira: u.sira, gorsel: u.gorsel }));
+    const urunler = (await sorgu("SELECT id, ad, ad_en, aciklama, aciklama_en, fiyat, kategori_id, sira, gorsel, alerjenler, icindekiler, kalori, protein, karbonhidrat, yag FROM urunler ORDER BY sira ASC"))
+      .map((u) => ({ id: u.id, ad: u.ad, adEn: u.ad_en, aciklama: u.aciklama, aciklamaEn: u.aciklama_en, fiyat: u.fiyat, kategoriId: u.kategori_id, sira: u.sira, gorsel: u.gorsel,
+        alerjenler: u.alerjenler || "", icindekiler: u.icindekiler || "", kalori: u.kalori || "", protein: u.protein || "", karbonhidrat: u.karbonhidrat || "", yag: u.yag || "" }));
     const subeler = await sorgu("SELECT id, sehir, semt, adres, telefon, saat FROM subeler ORDER BY id ASC");
     res.json({
       kategoriler,
@@ -200,13 +201,16 @@ app.post("/api/urun", girisGerek, async (req, res) => {
     const u = req.body || {};
     if (!u.id) u.id = yeniId("u");
     await sorgu(
-      `INSERT INTO urunler (id, ad, ad_en, aciklama, aciklama_en, fiyat, kategori_id, sira, gorsel)
-       VALUES (?,?,?,?,?,?,?,?,?)
+      `INSERT INTO urunler (id, ad, ad_en, aciklama, aciklama_en, fiyat, kategori_id, sira, gorsel,
+         alerjenler, icindekiler, kalori, protein, karbonhidrat, yag)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
        ON CONFLICT (id) DO UPDATE SET ad=EXCLUDED.ad, ad_en=EXCLUDED.ad_en, aciklama=EXCLUDED.aciklama,
          aciklama_en=EXCLUDED.aciklama_en, fiyat=EXCLUDED.fiyat, kategori_id=EXCLUDED.kategori_id,
-         sira=EXCLUDED.sira, gorsel=EXCLUDED.gorsel`,
+         sira=EXCLUDED.sira, gorsel=EXCLUDED.gorsel, alerjenler=EXCLUDED.alerjenler, icindekiler=EXCLUDED.icindekiler,
+         kalori=EXCLUDED.kalori, protein=EXCLUDED.protein, karbonhidrat=EXCLUDED.karbonhidrat, yag=EXCLUDED.yag`,
       [u.id, u.ad || "", u.adEn || "", u.aciklama || "", u.aciklamaEn || "",
-       u.fiyat || "", u.kategoriId || null, Number(u.sira) || 0, u.gorsel || ""]
+       u.fiyat || "", u.kategoriId || null, Number(u.sira) || 0, u.gorsel || "",
+       u.alerjenler || "", u.icindekiler || "", u.kalori || "", u.protein || "", u.karbonhidrat || "", u.yag || ""]
     );
     res.json({ ok: true, id: u.id });
   } catch (e) { res.status(500).json({ hata: e.message }); }

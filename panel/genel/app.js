@@ -202,6 +202,23 @@ function urunForm(id) {
       <input type="file" accept="image/*" onchange="gorselYukle(this)" />
       <img id="onizle" class="onizleme" />
       <input type="hidden" id="f_gorsel" />
+
+      <hr style="border:none;border-top:1px solid #eee;margin:18px 0" />
+      <b>🥗 Detay sayfası bilgileri (opsiyonel)</b>
+      <label>Alerjenler <small style="color:#999">(virgülle ayır — boşsa gösterilmez)</small></label>
+      <input id="f_alerjenler" placeholder="Gluten, Süt, Yumurta" />
+      <label>İçinde Neler Var? <small style="color:#999">(boşsa varsayılan metin görünür)</small></label>
+      <textarea id="f_icindekiler" rows="2" placeholder="Taze tavuk, özel baharatlar, köz ateşi..."></textarea>
+      <label>Besin Değerleri <small style="color:#999">(boş bırakılan değer gösterilmez)</small></label>
+      <div class="ikili">
+        <div><label>Kalori (kcal)</label><input id="f_kalori" placeholder="620" /></div>
+        <div><label>Protein (g)</label><input id="f_protein" placeholder="25" /></div>
+      </div>
+      <div class="ikili">
+        <div><label>Karbonhidrat (g)</label><input id="f_karbonhidrat" placeholder="36" /></div>
+        <div><label>Yağ (g)</label><input id="f_yag" placeholder="25" /></div>
+      </div>
+
       <div class="form-alt">
         <button class="btn" onclick="urunKaydet('${id || ""}')">Kaydet</button>
         <button class="btn btn-ikincil" onclick="urunlerCiz()">Vazgeç</button>
@@ -212,6 +229,9 @@ function urunForm(id) {
   $("f_aciklama").value = u.aciklama || ""; $("f_aciklamaEn").value = u.aciklamaEn || "";
   $("f_fiyat").value = u.fiyat || ""; $("f_kategoriId").value = u.kategoriId || "";
   $("f_sira").value = u.sira ?? 100; $("f_gorsel").value = u.gorsel || "";
+  $("f_alerjenler").value = u.alerjenler || ""; $("f_icindekiler").value = u.icindekiler || "";
+  $("f_kalori").value = u.kalori || ""; $("f_protein").value = u.protein || "";
+  $("f_karbonhidrat").value = u.karbonhidrat || ""; $("f_yag").value = u.yag || "";
   if (u.gorsel) $("onizle").src = u.gorsel; else $("onizle").style.visibility = "hidden";
 }
 async function urunKaydet(id) {
@@ -221,6 +241,9 @@ async function urunKaydet(id) {
     aciklama: $("f_aciklama").value.trim(), aciklamaEn: $("f_aciklamaEn").value.trim(),
     fiyat: $("f_fiyat").value.trim(), kategoriId: $("f_kategoriId").value,
     sira: Number($("f_sira").value) || 100, gorsel: $("f_gorsel").value,
+    alerjenler: $("f_alerjenler").value.trim(), icindekiler: $("f_icindekiler").value.trim(),
+    kalori: $("f_kalori").value.trim(), protein: $("f_protein").value.trim(),
+    karbonhidrat: $("f_karbonhidrat").value.trim(), yag: $("f_yag").value.trim(),
   };
   if (!u.ad) return mesajGoster("hata", "Ürün adı boş olamaz");
   await fetch("/api/urun", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });

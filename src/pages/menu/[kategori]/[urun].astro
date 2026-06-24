@@ -35,15 +35,15 @@ const ayarlar = await ayarlarGetir();
 const siparisHedef = ayarlar.siparisLinki || "/iletisim";
 const siparisDis = siparisHedef.startsWith("http");
 
-// Besin değerleri temsilîdir (gerçek veri yok). Ürüne göre biraz
-// değişsin diye ada bağlı basit bir türetme yapıyoruz.
-const tohum = urun.ad.length;
-const besin = {
-  kalori: 380 + (tohum % 9) * 30, // ~380-620
-  protein: 22 + (tohum % 7) * 3,
-  karbonhidrat: 28 + (tohum % 6) * 4,
-  yag: 16 + (tohum % 5) * 3,
-};
+// Detay sayfası ek bilgileri PANELDEN gelir. Boş bırakılan alanlar
+// sayfada hiç gösterilmez (uydurma/temsilî veri yok).
+const alerjenListe = (urun.alerjenler || "").split(",").map((a) => a.trim()).filter(Boolean);
+const besinKalemleri = [
+  { etiket: "Kalori", i18n: "nut.cal", deger: urun.kalori, birim: "kcal" },
+  { etiket: "Protein", i18n: "nut.protein", deger: urun.protein, birim: "g" },
+  { etiket: "Karbonhidrat", i18n: "nut.carb", deger: urun.karbonhidrat, birim: "g" },
+  { etiket: "Yağ", i18n: "nut.fat", deger: urun.yag, birim: "g" },
+].filter((b) => String(b.deger ?? "").trim() !== "");
 ---
 
 <Layout baslik={`${urun.ad} | Tavacı Mehmet`} aciklama={urun.aciklama || urun.ad}>
@@ -97,18 +97,19 @@ const besin = {
         </a>
       </div>
 
-      <!-- Alerjenler (temsilî) -->
+      <!-- Alerjenler (panelden; boşsa hiç gösterilmez) -->
+      {alerjenListe.length > 0 && (
       <div class="mt-8">
         <h3 class="font-semibold text-koyu text-sm mb-2 flex items-center gap-2">
           <span data-i18n="detail.allergens">Alerjenler</span>
-          <span class="text-[10px] font-normal text-koyu/40" data-i18n="detail.sample">Temsilî bilgidir</span>
         </h3>
         <div class="flex flex-wrap gap-2 text-xs">
-          <span class="bg-koyu/5 px-3 py-1.5 rounded-full" data-i18n="alrj.gluten">Gluten</span>
-          <span class="bg-koyu/5 px-3 py-1.5 rounded-full" data-i18n="alrj.milk">Süt</span>
-          <span class="bg-koyu/5 px-3 py-1.5 rounded-full" data-i18n="alrj.egg">Yumurta</span>
+          {alerjenListe.map((a) => (
+            <span class="bg-koyu/5 px-3 py-1.5 rounded-full">{a}</span>
+          ))}
         </div>
       </div>
+      )}
     </div>
   </section>
 
@@ -120,36 +121,31 @@ const besin = {
         <h2 class="font-baslik font-extrabold text-2xl text-koyu">
           <span data-i18n="detail.ingredients">İçinde Neler Var?</span>
         </h2>
-        <p class="mt-4 text-koyu/70 leading-relaxed" data-i18n="detail.ingText">
-          Taze malzemeler, özel baharatlar ve közün eşsiz lezzetiyle hazırlanır.
-        </p>
+        {urun.icindekiler ? (
+          <p class="mt-4 text-koyu/70 leading-relaxed">{urun.icindekiler}</p>
+        ) : (
+          <p class="mt-4 text-koyu/70 leading-relaxed" data-i18n="detail.ingText">
+            Taze malzemeler, özel baharatlar ve közün eşsiz lezzetiyle hazırlanır.
+          </p>
+        )}
       </div>
 
-      <!-- Besin değerleri (temsilî) -->
+      <!-- Besin değerleri (panelden; tüm değerler boşsa bölüm gizlenir) -->
+      {besinKalemleri.length > 0 && (
       <div data-aos="fade-up" data-aos-delay="100">
         <h2 class="font-baslik font-extrabold text-2xl text-koyu flex items-center gap-2">
           <span data-i18n="detail.nutrition">Besin Değerleri</span>
-          <span class="text-[10px] font-normal text-koyu/40" data-i18n="detail.sample">Temsilî bilgidir</span>
         </h2>
         <div class="mt-4 grid grid-cols-2 gap-3">
-          <div class="bg-krem rounded-xl px-4 py-3 flex justify-between">
-            <span class="text-koyu/60 text-sm" data-i18n="nut.cal">Kalori</span>
-            <span class="font-bold text-marka">{besin.kalori} kcal</span>
-          </div>
-          <div class="bg-krem rounded-xl px-4 py-3 flex justify-between">
-            <span class="text-koyu/60 text-sm" data-i18n="nut.protein">Protein</span>
-            <span class="font-bold text-marka">{besin.protein} g</span>
-          </div>
-          <div class="bg-krem rounded-xl px-4 py-3 flex justify-between">
-            <span class="text-koyu/60 text-sm" data-i18n="nut.carb">Karbonhidrat</span>
-            <span class="font-bold text-marka">{besin.karbonhidrat} g</span>
-          </div>
-          <div class="bg-krem rounded-xl px-4 py-3 flex justify-between">
-            <span class="text-koyu/60 text-sm" data-i18n="nut.fat">Yağ</span>
-            <span class="font-bold text-marka">{besin.yag} g</span>
-          </div>
+          {besinKalemleri.map((b) => (
+            <div class="bg-krem rounded-xl px-4 py-3 flex justify-between">
+              <span class="text-koyu/60 text-sm" data-i18n={b.i18n}>{b.etiket}</span>
+              <span class="font-bold text-marka">{b.deger} {b.birim}</span>
+            </div>
+          ))}
         </div>
       </div>
+      )}
     </div>
   </section>
 
