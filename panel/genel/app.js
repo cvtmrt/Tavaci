@@ -29,6 +29,16 @@ const METIN_GRUPLARI = [
     { a: "contact.title", e: "Başlık" },
     { a: "contact.sub", e: "Alt yazı" },
   ]},
+  { id: "franchise", baslik: "🤝 Franchise Sayfası", not: "Başvuru formu WhatsApp numarasına gider (⚙️ Ayarlar).", alanlar: [
+    { a: "franchise.title", e: "Başlık" },
+    { a: "franchise.sub", e: "Açıklama", cok: true },
+    { a: "franchise.benefit1.title", e: "1. Avantaj — başlık" },
+    { a: "franchise.benefit1.text", e: "1. Avantaj — metin", cok: true },
+    { a: "franchise.benefit2.title", e: "2. Avantaj — başlık" },
+    { a: "franchise.benefit2.text", e: "2. Avantaj — metin", cok: true },
+    { a: "franchise.benefit3.title", e: "3. Avantaj — başlık" },
+    { a: "franchise.benefit3.text", e: "3. Avantaj — metin", cok: true },
+  ]},
   { id: "footer", baslik: "🔻 Footer", alanlar: [
     { a: "footer.tagline", e: "Tanıtım yazısı", cok: true },
   ]},

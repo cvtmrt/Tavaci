@@ -26,6 +26,11 @@ const igFotolar = menu
 // yoksa CTA linkine. Dış linkse yeni sekmede açılsın.
 const siparisHedef = ayarlar.siparisLinki || cta.link || "/iletisim";
 const siparisDis = siparisHedef.startsWith("http");
+
+// Instagram @kullanıcı adını panel Ayarlar'daki adresten türet
+// (ör. https://instagram.com/tavacimehmetefendiii/ -> @tavacimehmetefendiii).
+const igKullanici = (ayarlar.instagram || "").replace(/\/+$/, "").split("/").pop() || "";
+const igEtiket = igKullanici ? "@" + igKullanici.replace(/^@/, "") : "";
 ---
 
 <Layout baslik="Tavacı Mehmet | Közde Pişen Tavalar" aciklama="Geleneksel tava lezzetleri, közün dumanıyla buluşuyor.">
@@ -66,7 +71,7 @@ const siparisDis = siparisHedef.startsWith("http");
         rel="noopener"
         class="mt-2 inline-block text-marka font-semibold hover:underline"
       >
-        @tavacimehmetefendiii
+        {igEtiket}
       </a>
     </div>
 

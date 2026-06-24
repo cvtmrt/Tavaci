@@ -67,11 +67,19 @@
   import { ceviriler as varsayilanSozluk } from "../i18n/ceviriler.js";
 
   // Panelde (DB'de) düzenlenen metinler SSR tarafından enjekte edilir;
-  // varsayılan sözlüğün üzerine yazılır (panel kazanır).
+  // varsayılan sözlüğün üzerine yazılır (panel kazanır). Panelde BOŞ
+  // bırakılan alan varsayılanı EZMEZ; o anahtarda ceviriler.js'e düşer.
   const panelMetin = (window as any).__PANEL_METINLER || {};
+  const birlestir = (def: Record<string, string>, ust: Record<string, string> = {}) => {
+    const sonuc = { ...def };
+    for (const [k, v] of Object.entries(ust)) {
+      if (v != null && String(v).trim() !== "") sonuc[k] = v;
+    }
+    return sonuc;
+  };
   const ceviriler = {
-    tr: { ...varsayilanSozluk.tr, ...(panelMetin.tr || {}) },
-    en: { ...varsayilanSozluk.en, ...(panelMetin.en || {}) },
+    tr: birlestir(varsayilanSozluk.tr, panelMetin.tr || {}),
+    en: birlestir(varsayilanSozluk.en, panelMetin.en || {}),
   };
 
   const kapsayici = document.getElementById("dil-kapsayici");
